@@ -78,11 +78,18 @@ function ReportModal({ report, onClose }) {
 }
 
 function App() {
-  const [reports, setReports] = useState(() => {\n    try {\n      const saved = window.localStorage.getItem('civicpulse-reports-v1')\n      if (!saved) return initialReports\n      const parsed = JSON.parse(saved)\n      return Array.isArray(parsed) && parsed.every(r => r && typeof r.id === 'string' && typeof r.status === 'string') ? parsed : initialReports\n    } catch { return initialReports }\n  })
+  const [reports, setReports] = useState(() => {
+    try {
+      const saved = window.localStorage.getItem('civicpulse-reports-v1')
+      if (!saved) return initialReports
+      const parsed = JSON.parse(saved)
+      return Array.isArray(parsed) && parsed.every(r => r && typeof r.id === 'string' && typeof r.status === 'string') ? parsed : initialReports
+    } catch { return initialReports }
+  })
   const [selectedZone, setSelectedZone] = useState(null)
   const [activeView, setActiveView] = useState('overview')
-  const [search, setSearch] = useState('')\n  const [statusFilter, setStatusFilter] = useState('All statuses')
-  const [showReport, setShowReport] = useState(false)
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('All statuses')
   const [selectedReport, setSelectedReport] = useState(null)
   const [processing, setProcessing] = useState(false)
   const [result, setResult] = useState(null)
@@ -92,17 +99,38 @@ function App() {
   const [imageName, setImageName] = useState('')
   const [fileData, setFileData] = useState('')
   const [toast, setToast] = useState('')
-  const fileRef = useRef(null)\n  const toastTimer = useRef(null)\n\n  useEffect(() => {\n    try { window.localStorage.setItem('civicpulse-reports-v1', JSON.stringify(reports)) } catch { /* Storage may be unavailable or full. */ }\n  }, [reports])\n\n  useEffect(() => () => {\n    if (toastTimer.current) window.clearTimeout(toastTimer.current)\n  }, [])\n\n  useEffect(() => () => {\n    if (fileData) URL.revokeObjectURL(fileData)\n  }, [fileData])
+  const fileRef = useRef(null)
+  const toastTimer = useRef(null)
 
-  const activeReports = reports.filter(r => r.status !== 'Resolved')
-  const filteredReports = useMemo(() => activeReports.filter(r => (!selectedZone || r.zoneId === selectedZone) && (r.title + r.zone + r.category + r.id).toLowerCase().includes(search.toLowerCase())).sort((a,b)=>b.severity-a.severity), [activeReports, selectedZone, search])
+  useEffect(() => {
+    try { window.localStorage.setItem('civicpulse-reports-v1', JSON.stringify(reports)) } catch { /* Storage may be unavailable or full. */ }
+  }, [reports])
+
+  useEffect(() => () => {
+    if (toastTimer.current) window.clearTimeout(toastTimer.current)
+  }, [])
+
+  useEffect(() => () => {
+    if (fileData) URL.revokeObjectURL(fileData)
+  }, [fileData])
+
+  const activeReports = useMemo(() => reports.filter(r => r.status !== 'Resolved'), [reports])
+  const filteredReports = useMemo(() => activeReports.filter(r => (!selectedZone || r.zoneId === selectedZone) && (statusFilter === 'All statuses' || r.status === statusFilter) && (r.title + r.zone + r.category + r.id + r.description + r.unit).toLowerCase().includes(search.trim().toLowerCase())).sort((a,b)=>b.severity-a.severity), [activeReports, selectedZone, statusFilter, search])
   const highZones = zones.filter(z => z.density >= 80).length
   const totalSaved = 48600 + reports.filter(r=>!initialReports.some(i=>i.id===r.id)).length * 1250
 
-  const notify = (message) => {\n    setToast(message)\n    if (toastTimer.current) window.clearTimeout(toastTimer.current)\n    toastTimer.current = window.setTimeout(() => setToast(''), 2800)\n  }
+  const notify = (message) => {
+    setToast(message)
+    if (toastTimer.current) window.clearTimeout(toastTimer.current)
+    toastTimer.current = window.setTimeout(() => setToast(''), 2800)
+  }
   const dispatch = (id) => {
-    setReports(prev => prev.map(r => r.id === id ? { ...r, status: 'Dispatched' } : r))
+    setReports(prev => prev.map(r => r.id === id && (r.status === 'Pending' || r.status === 'Assigned') ? { ...r, status: 'Dispatched' } : r))
     notify(`Crew dispatched for ${id}`)
+  }
+  const resolve = (id) => {
+    setReports(prev => prev.map(r => r.id === id && (r.status === 'Dispatched' || r.status === 'In progress') ? { ...r, status: 'Resolved' } : r))
+    notify(`Report ${id} marked as resolved`)
   }
   const analyze = async (event) => {
     event.preventDefault()
@@ -113,7 +141,8 @@ function App() {
     const zone = zones.find(z=>z.id===zoneId)
     const severity = severityFor(category, note)
     const count = reports.filter(r=>r.zoneId===zoneId && r.category===category).length
-    const nextId = Math.max(2049, ...reports.map(r => Number(String(r.id).replace(/\\D/g, '')) || 0)) + 1\n    const id = `CP-${nextId}`
+    const nextId = Math.max(2049, ...reports.map(r => Number(String(r.id).replace(/\D/g, '')) || 0)) + 1
+    const id = `CP-${nextId}`
     const newReport = {
       id, title: note.trim() ? note.trim().slice(0, 58) : category + ' reported near ' + zone.name,
       category, zone: zone.name, zoneId, severity, status: 'Pending',
@@ -182,7 +211,7 @@ function App() {
         <footer className="mt-10 flex flex-col justify-between gap-2 border-t border-slate-200 py-5 text-[11px] text-slate-400 sm:flex-row"><span>© 2026 CivicPulse AI · Smart Nation prototype</span><span className="flex items-center gap-1"><ShieldCheck size={13}/> Synthetic demo data · No live government integration</span></footer>
       </div>
     </main>
-    {showReport&&<div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm" onClick={()=>{setShowReport(false);setActiveView('reports')}}><div className="w-full max-w-2xl rounded-2xl bg-white p-5 shadow-2xl" onClick={e=>e.stopPropagation()}><div className="mb-4 flex items-center justify-between"><div><div className="eyebrow">Citizen portal</div><h3 className="font-display text-xl font-extrabold text-slate-900">Submit an issue report</h3></div><button onClick={()=>setShowReport(false)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"><X size={18}/></button></div><p className="mb-4 text-sm text-slate-500">Your report will be processed by the local AI triage simulator and added to the authority dashboard.</p><div className="rounded-xl bg-slate-50 p-3 text-xs text-slate-600">Go to <button onClick={()=>{setShowReport(false);setActiveView('reports')}} className="font-bold text-emerald-800 underline">Issue reports</button> to complete the report form.</div></div></div>}
+
     <ReportModal report={selectedReport} onClose={()=>setSelectedReport(null)}/>
     {toast&&<div className="fixed bottom-5 right-5 z-[60] flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-xl"><Check size={16} className="text-emerald-400"/>{toast}</div>}
   </div>
