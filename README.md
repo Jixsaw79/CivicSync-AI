@@ -60,7 +60,7 @@ npm run preview
 
 ## Frontend quality checks
 
-A GitHub Actions workflow builds the production bundle on pushes to the improvement branches and on pull requests targeting `main`. Run the same check locally with `npm install` followed by `npm run build`.
+A GitHub Actions workflow builds the production bundle on pushes to the improvement branches and on pull requests targeting `main`. Run the same checks locally with `npm install`, `npm test`, and `npm run build`.
 
 ## Suggested next steps
 
