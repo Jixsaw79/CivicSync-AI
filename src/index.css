@@ -10,6 +10,14 @@
   background: #f5f7f6;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.dark {
+  color-scheme: dark;
+  color: #e2e8f0;
+  background: #0b1220;
 }
 
 * { box-sizing: border-box; }
@@ -17,16 +25,80 @@ body { margin: 0; min-width: 320px; min-height: 100vh; }
 button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
 button:disabled { cursor: not-allowed; }
-:focus-visible { outline: 3px solid #059669; outline-offset: 3px; }
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+
+:focus-visible {
+  outline: 3px solid #059669;
+  outline-offset: 3px;
 }
+
+.dark :focus-visible {
+  outline-color: #34d399;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 ::selection { background: #d1fae5; color: #065f46; }
+.dark ::selection { background: #065f46; color: #d1fae5; }
 
 @layer components {
-  .panel { @apply rounded-2xl border border-slate-200/80 bg-white shadow-soft; }
-  .eyebrow { @apply text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400; }
-  .btn-primary { @apply inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60; }
-  .btn-secondary { @apply inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50; }
-  .field { @apply w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-600/10; }
+  .panel {
+    @apply rounded-2xl border border-slate-200/80 bg-white shadow-soft transition-colors;
+  }
+  .dark .panel {
+    @apply border-slate-700/80 bg-slate-900/80 shadow-soft-dark;
+  }
+
+  .eyebrow {
+    @apply text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400;
+  }
+  .dark .eyebrow {
+    @apply text-slate-500;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60 active:scale-[0.98];
+  }
+  .dark .btn-primary {
+    @apply bg-emerald-600 hover:bg-emerald-500;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 active:scale-[0.98];
+  }
+  .dark .btn-secondary {
+    @apply border-slate-600 bg-slate-800 text-slate-200 hover:bg-slate-700;
+  }
+
+  .field {
+    @apply w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-600/10;
+  }
+  .dark .field {
+    @apply border-slate-600 bg-slate-800/80 text-slate-100 placeholder:text-slate-500 focus:border-emerald-500 focus:ring-emerald-500/20;
+  }
+
+  .card-hover {
+    @apply transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md;
+  }
+}
+
+/* Smooth scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+.dark ::-webkit-scrollbar-thumb { background: #475569; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+.dark ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+.modal-backdrop {
+  animation: fadeIn 0.2s ease-out;
+}
+.modal-panel {
+  animation: slideUp 0.3s ease-out;
 }
