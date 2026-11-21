@@ -474,8 +474,8 @@ function App() {
       const triage = payload.triage
       const zone = zones.find((z) => z.id === zoneId)
       const count = reports.filter((r) => r.zoneId === zoneId && r.category === triage.category).length
-      const nextId = Math.max(2048, ...reports.map((r) => Number(String(r.id).replace(/\\D/g, '')) || 0)) + 1
-      const id = `CS-\u0024{nextId}`
+      const nextId = Math.max(2048, ...reports.map((r) => Number(String(r.id).replace(/\D/g, '')) || 0)) + 1
+      const id = `CS-${nextId}`
       const newReport = {
         id,
         title: triage.summary || note.trim().slice(0, 58),
@@ -491,7 +491,7 @@ function App() {
         cost: { 'Road damage': 8600, Waterlogging: 6900, Streetlight: 2400, 'Waste accumulation': 1700 }[triage.category] ?? 2500,
         age: 'Just now',
         description: note.trim(),
-        duplicate: count ? `Potential duplicate cluster: \u0024{count} similar report(s) in this zone` : 'No matching duplicate cluster found',
+        duplicate: count ? `Potential duplicate cluster: ${count} similar report(s) in this zone` : 'No matching duplicate cluster found',
         imageData: imageDataUrl || null,
         aiSummary: triage.summary,
         confidence: triage.confidence,
