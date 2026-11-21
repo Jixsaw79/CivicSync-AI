@@ -115,7 +115,7 @@ function ZoneMap({ selected, onSelect, reports }) {
   )
 }
 
-function ReportTable({ reports, onDispatch, onResolve, onSelect }) {
+function ReportTable({ reports, onDispatch, onResolve, onSelect, canManage = true }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-soft dark:border-slate-700 dark:bg-slate-900/80">
       <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-slate-800">
@@ -170,7 +170,9 @@ function ReportTable({ reports, onDispatch, onResolve, onSelect }) {
                   </span>
                 </td>
                 <td className="px-5 py-4 text-right">
-                  {r.status === 'Pending' || r.status === 'Assigned' ? (
+                  {!canManage ? (
+                    <span className="text-xs font-medium text-slate-400">Staff access only</span>
+                  ) : r.status === 'Pending' || r.status === 'Assigned' ? (
                     <button
                       onClick={() => onDispatch(r.id)}
                       className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500"
@@ -322,6 +324,7 @@ function App() {
 
   const [selectedZone, setSelectedZone] = useState(null)
   const [activeView, setActiveView] = useState('overview')
+  const [demoRole, setDemoRole] = useState('admin')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All statuses')
   const [selectedReport, setSelectedReport] = useState(null)
@@ -514,7 +517,7 @@ function App() {
   const nav = [
     { id: 'overview', label: 'Overview', icon: Layers3 },
     { id: 'reports', label: 'Issue reports', icon: MessageSquareText },
-    { id: 'optimizer', label: 'Resource optimizer', icon: Wallet },
+    ...(demoRole === 'admin' ? [{ id: 'optimizer', label: 'Resource optimizer', icon: Wallet }] : []),
   ]
 
   const allocationTotal = allocationData.reduce((sum, d) => sum + d.optimized, 0)
@@ -583,24 +586,22 @@ function App() {
               >
                 {darkMode ? <Sun size={18} /> : <Moon size={18} />}
               </button>
-              <span className="hidden items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-800 sm:inline-flex dark:bg-emerald-950/50 dark:text-emerald-300">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" /> Prototype live
+              <span className="hidden items-center gap-2 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800 sm:inline-flex dark:bg-amber-950/50 dark:text-amber-300">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> DNCC simulation
               </span>
               <button className="relative rounded-xl p-2.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">
                 <Bell size={19} />
                 <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-amber-500 ring-2 ring-white dark:ring-slate-950" />
               </button>
               <div className="hidden h-8 w-px bg-slate-200 dark:bg-slate-700 sm:block" />
-              <div className="hidden items-center gap-2 sm:flex">
-                <div className="grid h-9 w-9 place-items-center rounded-full bg-emerald-100 text-xs font-extrabold text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
-                  AD
-                </div>
-                <div>
-                  <div className="text-xs font-bold text-slate-800 dark:text-slate-100">Admin Demo</div>
-                  <div className="text-[10px] text-slate-400">Municipal authority</div>
-                </div>
-                <ChevronDown size={14} className="text-slate-400" />
-              </div>
+              <label className="hidden items-center gap-2 sm:flex">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Demo role</span>
+                <select value={demoRole} onChange={(event) => { setDemoRole(event.target.value); if (event.target.value !== "admin" && activeView === "optimizer") setActiveView("overview") }} className="field w-auto py-2 text-xs" aria-label="Switch simulated demo role">
+                  <option value="citizen">Citizen</option>
+                  <option value="staff">Department staff</option>
+                  <option value="admin">Administrator</option>
+                </select>
+              </label>
             </div>
           </div>
           <div className="flex gap-1 overflow-x-auto border-t border-slate-100 px-4 py-2 dark:border-slate-800 lg:hidden">
@@ -686,7 +687,7 @@ function App() {
 
               <div className="mt-6">
                 <SectionHeading eyebrow="Operations" title="Priority maintenance queue" subtitle="Highest urgency items first." />
-                <ReportTable reports={filteredReports.slice(0, 6)} onDispatch={dispatch} onResolve={resolve} onSelect={setSelectedReport} />
+                <ReportTable reports={filteredReports.slice(0, 6)} onDispatch={dispatch} onResolve={resolve} onSelect={setSelectedReport} canManage={demoRole !== 'citizen'} />
               </div>
             </>
           )}
