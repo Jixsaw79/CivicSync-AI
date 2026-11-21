@@ -11,6 +11,7 @@ import {
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts'
 import { allocationData, departmentFor, initialReports, severityFor, zones } from './data'
+import MapView from './MapView'
 
 const money = (value) => '$' + Number(value).toLocaleString('en-US')
 
@@ -37,7 +38,7 @@ function Brand() {
       </div>
       <div>
         <div className="font-display text-[17px] font-extrabold tracking-tight text-slate-900 dark:text-white">
-          CivicPulse <span className="text-emerald-700 dark:text-emerald-400">AI</span>
+          CivicSync <span className="text-emerald-700 dark:text-emerald-400">AI</span>
         </div>
         <div className="text-[10px] font-semibold uppercase tracking-[.16em] text-slate-400">Urban intelligence</div>
       </div>
@@ -88,76 +89,26 @@ function SectionHeading({ eyebrow, title, subtitle, action }) {
 }
 
 function ZoneMap({ selected, onSelect, reports }) {
-  const counts = zones.map((z) => ({
-    ...z,
-    live: reports.filter((r) => r.zoneId === z.id && r.status !== 'Resolved').length,
-  }))
-  const colors = (density) =>
-    density >= 80
-      ? 'border-rose-200 bg-rose-100 text-rose-900 hover:bg-rose-200 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-200 dark:hover:bg-rose-900/60'
-      : density >= 55
-      ? 'border-amber-200 bg-amber-100 text-amber-900 hover:bg-amber-200 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-200 dark:hover:bg-amber-900/60'
-      : 'border-emerald-200 bg-emerald-50 text-emerald-900 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200 dark:hover:bg-emerald-900/50'
-
   return (
     <div className="panel p-5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div className="eyebrow">Live issue density</div>
-          <div className="mt-1 text-sm font-bold text-slate-800 dark:text-slate-100">City zone intelligence map</div>
+          <div className="eyebrow">Geospatial issue overview</div>
+          <div className="mt-1 text-sm font-bold text-slate-800 dark:text-slate-100">Dhaka North demonstration map</div>
         </div>
         <div className="flex gap-3 text-[11px] font-medium text-slate-500 dark:text-slate-400">
-          <span className="flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-sm bg-emerald-300" />Low</span>
-          <span className="flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-sm bg-amber-300" />Medium</span>
-          <span className="flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-sm bg-rose-300" />High</span>
+          <span className="flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-full bg-emerald-500" />Low</span>
+          <span className="flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-full bg-amber-500" />Medium</span>
+          <span className="flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-full bg-rose-500" />High</span>
         </div>
       </div>
-      <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-[#f4f7f5] p-3 dark:border-slate-700 dark:bg-slate-900/50">
-        <div
-          className="pointer-events-none absolute inset-0 opacity-40"
-          style={{
-            backgroundImage:
-              'linear-gradient(rgba(148,163,184,.18) 1px, transparent 1px),linear-gradient(90deg, rgba(148,163,184,.18) 1px, transparent 1px)',
-            backgroundSize: '30px 30px',
-          }}
-        />
-        <div className="relative grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {counts.map((zone) => (
-            <button
-              key={zone.id}
-              onClick={() => onSelect(selected === zone.id ? null : zone.id)}
-              aria-pressed={selected === zone.id}
-              className={`group min-h-[104px] rounded-xl border p-3 text-left transition hover:-translate-y-0.5 hover:shadow-sm ${colors(zone.density)} ${
-                selected === zone.id ? 'ring-2 ring-emerald-700 ring-offset-2 dark:ring-emerald-400 dark:ring-offset-slate-900' : ''
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-extrabold tracking-widest opacity-60">{zone.short}</span>
-                <MapPin size={13} className="opacity-60" />
-              </div>
-              <div className="mt-3 text-xs font-bold leading-tight">{zone.name}</div>
-              <div className="mt-1 flex items-center justify-between">
-                <span className="text-[10px] opacity-70">{zone.live} active</span>
-                <span className="text-sm font-extrabold">{zone.density}%</span>
-              </div>
-            </button>
-          ))}
-        </div>
-        <div className="relative mt-3 flex items-center justify-between border-t border-slate-200/80 pt-3 text-[10px] text-slate-400 dark:border-slate-700 dark:text-slate-500">
-          <span className="flex items-center gap-1">
-            <Navigation size={12} /> Schematic city zones · illustrative, not to scale
-          </span>
-          <span>Click a zone to filter reports</span>
-        </div>
-      </div>
+      <MapView zones={zones} reports={reports} selected={selected} onSelect={(id) => onSelect(selected === id ? null : id)} />
       {selected && (
         <div className="mt-3 flex items-center justify-between rounded-xl bg-emerald-50 px-3 py-2.5 text-sm dark:bg-emerald-950/40">
           <span className="font-semibold text-emerald-900 dark:text-emerald-200">
             {zones.find((z) => z.id === selected)?.name} selected
           </span>
-          <button onClick={() => onSelect(null)} className="text-xs font-bold text-emerald-800 underline dark:text-emerald-300">
-            Clear filter
-          </button>
+          <button onClick={() => onSelect(null)} className="text-xs font-bold text-emerald-800 underline dark:text-emerald-300">Clear filter</button>
         </div>
       )}
     </div>
@@ -506,39 +457,58 @@ function App() {
   const analyze = async (event) => {
     event.preventDefault()
     if (processing) return
+    if (note.trim().length < 8) {
+      notify('Add at least 8 characters describing the issue')
+      return
+    }
     setProcessing(true)
     setResult(null)
-    await new Promise((resolve) => window.setTimeout(resolve, 1500))
-
-    const zone = zones.find((z) => z.id === zoneId)
-    const severity = severityFor(category, note)
-    const count = reports.filter((r) => r.zoneId === zoneId && r.category === category).length
-    const nextId = Math.max(2048, ...reports.map((r) => Number(String(r.id).replace(/\D/g, '')) || 0)) + 1
-    const id = `CP-${nextId}`
-
-    const newReport = {
-      id,
-      title: note.trim() ? note.trim().slice(0, 58) : category + ' reported near ' + zone.name,
-      category,
-      zone: zone.name,
-      zoneId,
-      severity,
-      status: 'Pending',
-      unit: departmentFor(category),
-      impact: Math.round(zone.population * (severity / 100) * 0.12),
-      cost: { 'Road damage': 8600, Waterlogging: 6900, Streetlight: 2400, 'Waste accumulation': 1700 }[category] ?? 2500,
-      age: 'Just now',
-      description: note || 'Citizen-submitted infrastructure report.',
-      duplicate: count ? `Potential duplicate cluster: ${count} similar report(s) in this zone` : 'No matching duplicate cluster found',
-      imageData: imageDataUrl || null,
+    try {
+      const response = await fetch('/api/demo/triage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: note.trim(), category }),
+      })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(payload.error || 'AI triage is unavailable. Configure GEMINI_API_KEY.')
+      const triage = payload.triage
+      const zone = zones.find((z) => z.id === zoneId)
+      const count = reports.filter((r) => r.zoneId === zoneId && r.category === triage.category).length
+      const nextId = Math.max(2048, ...reports.map((r) => Number(String(r.id).replace(/\\D/g, '')) || 0)) + 1
+      const id = `CS-\u0024{nextId}`
+      const newReport = {
+        id,
+        title: triage.summary || note.trim().slice(0, 58),
+        category: triage.category,
+        zone: zone.name,
+        zoneId,
+        latitude: zone.latitude,
+        longitude: zone.longitude,
+        severity: triage.severity,
+        status: 'Pending',
+        unit: triage.department,
+        impact: Math.round(zone.population * (triage.severity / 100) * 0.12),
+        cost: { 'Road damage': 8600, Waterlogging: 6900, Streetlight: 2400, 'Waste accumulation': 1700 }[triage.category] ?? 2500,
+        age: 'Just now',
+        description: note.trim(),
+        duplicate: count ? `Potential duplicate cluster: \u0024{count} similar report(s) in this zone` : 'No matching duplicate cluster found',
+        imageData: imageDataUrl || null,
+        aiSummary: triage.summary,
+        confidence: triage.confidence,
+        safetyFlags: triage.safety_flags || [],
+        requiresHumanReview: true,
+        triageProvider: payload.provider || 'Gemini',
+      }
+      setReports((prev) => [newReport, ...prev])
+      setResult(newReport)
+      clearImage()
+      setNote('')
+      notify('AI triage complete · report added to the demonstration queue')
+    } catch (error) {
+      notify(error.message || 'AI triage failed')
+    } finally {
+      setProcessing(false)
     }
-
-    setReports((prev) => [newReport, ...prev])
-    setResult(newReport)
-    setProcessing(false)
-    clearImage()
-    setNote('')
-    notify('AI triage complete · report added to live queue')
   }
 
   const nav = [
@@ -582,10 +552,10 @@ function App() {
             <Radio size={15} />
             <span className="text-[10px] font-bold uppercase tracking-widest">Demo environment</span>
           </div>
-          <div className="mt-3 font-display text-sm font-bold">Smart Nation pilot</div>
+          <div className="mt-3 font-display text-sm font-bold">DNCC civic services demo</div>
           <p className="mt-1 text-xs leading-5 text-slate-300">Illustrative city data. No live municipal connection.</p>
           <div className="mt-4 flex items-center gap-2 text-[10px] text-slate-400">
-            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse-soft" /> All systems operational
+            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse-soft" /> Prototype services available
           </div>
         </div>
       </aside>
@@ -832,7 +802,7 @@ function App() {
                         </>
                       ) : (
                         <>
-                          <Sparkles size={16} /> Run simulated AI triage
+                          <Sparkles size={16} /> Run AI triage
                         </>
                       )}
                     </button>
@@ -941,7 +911,7 @@ function App() {
           )}
 
           <footer className="mt-10 flex flex-col justify-between gap-2 border-t border-slate-200 py-5 text-[11px] text-slate-400 dark:border-slate-800 sm:flex-row">
-            <span>© 2026 CivicPulse AI · Smart Nation prototype · Enhanced by Jixsaw</span>
+            <span>© 2026 CivicSync AI · DNCC hackathon prototype · Enhanced by Jixsaw</span>
             <span className="flex items-center gap-1">
               <ShieldCheck size={13} /> Synthetic demo data · No live government integration
             </span>
