@@ -475,6 +475,10 @@ function App() {
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(payload.error || 'AI triage is unavailable. Configure GEMINI_API_KEY.')
       const triage = payload.triage
+      const municipalResponse = await fetch('/api/demo/municipal')
+      const municipal = await municipalResponse.json().catch(() => ({}))
+      if (!municipalResponse.ok || !Array.isArray(municipal.departments)) throw new Error('Mock municipal adapter is unavailable.')
+      const routedDepartment = municipal.departments.find((department) => department.handles.includes(triage.category))?.name || triage.department
       const zone = zones.find((z) => z.id === zoneId)
       const count = reports.filter((r) => r.zoneId === zoneId && r.category === triage.category).length
       const nextId = Math.max(2048, ...reports.map((r) => Number(String(r.id).replace(/\D/g, '')) || 0)) + 1
@@ -489,7 +493,7 @@ function App() {
         longitude: zone.longitude,
         severity: triage.severity,
         status: 'Pending',
-        unit: triage.department,
+        unit: routedDepartment,
         impact: Math.round(zone.population * (triage.severity / 100) * 0.12),
         cost: { 'Road damage': 8600, Waterlogging: 6900, Streetlight: 2400, 'Waste accumulation': 1700 }[triage.category] ?? 2500,
         age: 'Just now',
@@ -501,6 +505,7 @@ function App() {
         safetyFlags: triage.safety_flags || [],
         requiresHumanReview: true,
         triageProvider: payload.provider || 'Gemini',
+        municipalAdapter: municipal.adapter,
       }
       setReports((prev) => [newReport, ...prev])
       setResult(newReport)
