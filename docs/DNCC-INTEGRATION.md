@@ -1,41 +1,38 @@
-# DNCC integration plan
+# CivicSync AI — DNCC hackathon simulation
 
-## Municipality scope
+## Purpose
 
-The first deployment target is Dhaka North City Corporation (DNCC), not DSCC. The app must not silently classify a DSCC address as a DNCC report.
+CivicSync AI is a hackathon prototype that demonstrates how citizen-reported civic issues could move through AI-assisted triage, department routing and staff review for a Dhaka North City Corporation (DNCC)-inspired workflow.
 
-## Verified public references
+This is **not** an official DNCC product, does not submit complaints to DNCC and is not affiliated with the government.
 
-- DNCC official portal: https://dncc.gov.bd/
-- DNCC sitemap/service directory: https://dncc.gov.bd/views/sitemap
-- The official site publishes department directories (including Engineering, ICT Cell, Waste Management, Health and Urban Planning), ward officer information, citizen services, notices and links to DNCC maps/community-service location maps.
-- DNCC procurement records describe GIS-based ward maps and an asset-inventory/web-GIS asset-management platform. This establishes that ward-level GIS work has existed; it does not grant this project access to those datasets or APIs.
+## Demonstration architecture
 
-## Integration boundary
+- **AI triage:** `POST /api/demo/triage` calls Google Gemini from a server-side function. The API key is never sent to the browser. Every recommendation is marked for human review.
+- **Map:** OpenStreetMap tiles provide the geographic basemap. The points and neighborhood names are illustrative demo data; they are not official ward boundaries or verified ward assignments.
+- **Municipal adapter:** `GET /api/demo/municipal` returns synthetic departments, sample ward labels and example service targets. It never contacts DNCC.
+- **Workflow:** report status, dispatch actions, budget estimates and impact figures are synthetic demonstration values.
+- **Persistence:** the current UI stores reports in browser localStorage. Data is local to the browser and is not a shared database.
+- **Roles:** Citizen, Department Staff and Administrator are simulated presentation roles, not secure authenticated accounts or server-enforced permissions.
 
-As of this implementation, no public, documented, supported DNCC API for submitting grievances, retrieving authenticated case status, or downloading authoritative ward-boundary GeoJSON has been verified. The API endpoint `/api/dncc` therefore returns an explicitly labelled public-source registry, not fabricated live records.
+## Setup
 
-Before production municipal integration, DNCC/ICT Cell must provide or authorize:
-1. API documentation, base URLs, credentials and rate limits.
-2. Written permission and data-sharing terms for complaint creation/status retrieval.
-3. Authoritative ward boundary polygons (GeoJSON/shapefile) with coordinate reference system and version date.
-4. Department routing contacts, service-level targets and escalation rules.
-5. A sandbox/test account and a named technical liaison.
+1. Install dependencies with `npm install`.
+2. Set `GEMINI_API_KEY` in the Vercel project environment (or another serverless deployment environment).
+3. Deploy to Vercel so the `api/` serverless functions are available.
+4. Open the deployed preview and submit a sample report. If the key is missing, the UI reports that real inference is not configured; it does not silently fake an AI result.
 
-## Suggested data workflow
+For local development, the Vite UI can run with `npm run dev`, but Vite alone does not execute Vercel API routes. Use the Vercel CLI's local development command to test the full API workflow.
 
-1. Citizen chooses a point on a map; the server validates the point against the approved DNCC ward polygon dataset.
-2. Store coordinates as WGS84 and derive ward number from the authoritative polygon layer.
-3. Persist the report and attachment metadata in Supabase; store image bytes in a private bucket with signed URLs.
-4. Gemini produces a draft summary/category/severity with confidence and safety flags. A human staff member reviews it before assignment.
-5. Authorized staff update status; all changes should be recorded in an append-only audit log before public launch.
-6. A separately configured municipal adapter sends/receives cases only after DNCC has approved the integration.
+## Demo data and safety
 
-## Data and privacy safeguards
+- Use synthetic names, descriptions, images and locations only.
+- Do not enter real citizens' personal information.
+- Do not display the prototype as an official DNCC complaint channel.
+- Do not describe the illustrative points as DNCC ward polygons.
+- Do not claim that a complaint was received by, assigned to or resolved by DNCC.
+- Gemini output is an assistive classification suggestion, not a verified fact or automated government decision.
 
-- Never use public website scraping as a substitute for an API agreement.
-- Do not send citizen personal data or exact location to an AI provider unless disclosed and authorized.
-- Keep all service-role keys and AI keys server-side.
-- Do not expose staff/admin role changes through user-editable profile metadata.
-- Use least-privilege role policies, private storage, retention limits, abuse throttling and audit logs.
-- AI output is decision support only; no automated rejection, emergency dispatch or official DNCC commitment.
+## What is intentionally out of scope
+
+No government contact, DNCC API credential, official ward GIS file, municipal data-sharing agreement, production staff account or live complaint integration is needed for this hackathon demonstration. A real municipal deployment would be a separate project requiring authorization, verified data and security review.
