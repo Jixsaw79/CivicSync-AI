@@ -272,7 +272,7 @@ function ReportModal({ report, onClose }) {
 
         <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 p-3 dark:border-emerald-900 dark:bg-emerald-950/30">
           <div className="flex items-center gap-2 text-xs font-bold text-emerald-800 dark:text-emerald-300">
-            <Sparkles size={14} /> AI triage insight
+            <Sparkles size={14} /> AI triage recommendation
           </div>
           <p className="mt-1 text-sm text-emerald-900 dark:text-emerald-200">
             Severity score {report.severity}/100 · {report.duplicate}
@@ -723,13 +723,13 @@ function App() {
 
               <div className="grid gap-6 xl:grid-cols-5">
                 <div className="xl:col-span-3">
-                  <ReportTable reports={filteredReports} onDispatch={dispatch} onResolve={resolve} onSelect={setSelectedReport} />
+                  <ReportTable reports={filteredReports} onDispatch={dispatch} onResolve={resolve} onSelect={setSelectedReport} canManage={demoRole !== 'citizen'} />
                 </div>
 
                 <div className="panel p-5 xl:col-span-2">
                   <div className="eyebrow">Citizen report simulator</div>
                   <h3 className="mt-1 font-display text-lg font-extrabold text-slate-900 dark:text-white">Submit new issue</h3>
-                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Simulated AI triage · image stays local</p>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Gemini AI triage · synthetic DNCC workflow</p>
 
                   <form onSubmit={analyze} className="mt-5 space-y-4">
                     <div>
@@ -903,6 +903,7 @@ function App() {
                   onDispatch={dispatch}
                   onResolve={resolve}
                   onSelect={setSelectedReport}
+                  canManage={demoRole !== 'citizen'}
                 />
               </div>
               <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-4 text-xs leading-5 text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
