@@ -1,5 +1,5 @@
 {
-  "name": "civicpulse-ai",
+  "name": "civicsync-ai",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -14,7 +14,6 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "recharts": "^2.15.0",
-    "@supabase/supabase-js": "^2.57.0",
     "leaflet": "^1.9.4",
     "react-leaflet": "^4.2.1"
   },
