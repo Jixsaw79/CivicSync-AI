@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import {
   Activity, AlertTriangle, ArrowDownRight, ArrowUpRight, Bell, Building2,
-  Check, CheckCircle2, ChevronDown, Clock3, CloudUpload, FileImage, Filter,
+  Check, CheckCircle2, Clock3, CloudUpload, FileImage, Filter,
   Gauge, Layers3, Leaf, MapPin, Menu, MessageSquareText, Moon, Navigation,
   Plus, Radio, Search, ShieldCheck, Sparkles, Sun, TrendingUp, Users, Wallet,
   X, Zap, Image as ImageIcon,
@@ -10,7 +10,7 @@ import {
   Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts'
-import { allocationData, departmentFor, initialReports, severityFor, zones } from './data'
+import { allocationData, initialReports, zones } from './data'
 import MapView from './MapView'
 
 const money = (value) => '$' + Number(value).toLocaleString('en-US')
@@ -302,7 +302,7 @@ function ConfirmDialog({ open, title, message, confirmLabel, onConfirm, onCancel
 function App() {
   const [reports, setReports] = useState(() => {
     try {
-      const saved = window.localStorage.getItem('civicpulse-reports-v2')
+      const saved = window.localStorage.getItem('civicsync-reports-v1')
       if (!saved) return initialReports
       const parsed = JSON.parse(saved)
       return Array.isArray(parsed) &&
@@ -339,7 +339,7 @@ function App() {
   const [toast, setToast] = useState('')
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window === 'undefined') return false
-    const saved = localStorage.getItem('civicpulse-theme')
+    const saved = localStorage.getItem('civicsync-theme')
     if (saved) return saved === 'dark'
     return window.matchMedia('(prefers-color-scheme: dark)').matches
   })
@@ -352,16 +352,16 @@ function App() {
     const root = document.documentElement
     if (darkMode) {
       root.classList.add('dark')
-      localStorage.setItem('civicpulse-theme', 'dark')
+      localStorage.setItem('civicsync-theme', 'dark')
     } else {
       root.classList.remove('dark')
-      localStorage.setItem('civicpulse-theme', 'light')
+      localStorage.setItem('civicsync-theme', 'light')
     }
   }, [darkMode])
 
   useEffect(() => {
     try {
-      window.localStorage.setItem('civicpulse-reports-v2', JSON.stringify(reports))
+      window.localStorage.setItem('civicsync-reports-v1', JSON.stringify(reports))
     } catch {
       /* Storage may be unavailable or full. */
     }
@@ -634,7 +634,7 @@ function App() {
           <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
             <div>
               <div className="eyebrow flex items-center gap-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" /> Smart Nation · Integrated public-data intelligence
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" /> Dhaka North · Civic issue intelligence
               </div>
               <h1 className="mt-2 font-display text-2xl font-extrabold tracking-tight text-slate-950 sm:text-3xl dark:text-white">
                 {activeView === 'overview' ? 'Executive overview' : activeView === 'reports' ? 'Citizen issue reports' : 'Budget & resource optimizer'}
