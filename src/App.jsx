@@ -11,7 +11,7 @@ import {
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts'
 import { allocationData, initialReports, zones } from './data'
-import { loadStoredReports, readThemePreference } from './storage'
+import { loadStoredReports, readThemePreference, retainRecentEvidence } from './storage'
 
 const MapView = lazy(() => import('./MapView'))
 
@@ -436,6 +436,7 @@ function App() {
   const [locationNote, setLocationNote] = useState('')
   const [formError, setFormError] = useState('')
   const [imageName, setImageName] = useState('')
+  const [imageProcessing, setImageProcessing] = useState(false)
   const [fileData, setFileData] = useState('')
   const [imageDataUrl, setImageDataUrl] = useState('')
   const [toast, setToast] = useState('')
@@ -454,6 +455,7 @@ function App() {
   const [insightsError, setInsightsError] = useState('')
 
   const fileRef = useRef(null)
+  const imageProcessRef = useRef(0)
   const toastTimer = useRef(null)
 
   useEffect(() => {
@@ -631,42 +633,53 @@ function App() {
     notify('Report CSV exported')
   }
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const f = e.target.files?.[0]
     if (!f) return
     if (!['image/png', 'image/jpeg', 'image/webp'].includes(f.type)) {
+      clearImage()
       notify('Choose a PNG, JPG or WEBP image')
-      e.target.value = ''
       return
     }
     if (f.size > 5 * 1024 * 1024) {
+      clearImage()
       notify('Image must be 5 MB or smaller')
-      e.target.value = ''
       return
     }
-    if (fileData) URL.revokeObjectURL(fileData)
 
+    const requestId = ++imageProcessRef.current
+    if (fileData) URL.revokeObjectURL(fileData)
     setImageName(f.name)
     setFileData(URL.createObjectURL(f))
+    setImageDataUrl('')
+    setImageProcessing(true)
 
-    const reader = new FileReader()
-    reader.onload = () => {
-      setImageDataUrl(typeof reader.result === 'string' ? reader.result : '')
+    try {
+      const optimized = await optimizeEvidenceImage(f)
+      if (requestId === imageProcessRef.current) setImageDataUrl(optimized)
+    } catch (error) {
+      if (requestId === imageProcessRef.current) {
+        clearImage()
+        notify(error.message || 'The selected image could not be processed.')
+      }
+    } finally {
+      if (requestId === imageProcessRef.current) setImageProcessing(false)
     }
-    reader.readAsDataURL(f)
   }
 
   const clearImage = () => {
+    imageProcessRef.current += 1
     if (fileData) URL.revokeObjectURL(fileData)
     setFileData('')
     setImageDataUrl('')
     setImageName('')
+    setImageProcessing(false)
     if (fileRef.current) fileRef.current.value = ''
   }
 
   const analyze = async (event) => {
     event.preventDefault()
-    if (processing) return
+    if (processing || imageProcessing) return
     if (note.trim().length < 8) {
       const message = 'Please describe the issue in at least 8 characters.'
       setFormError(message)
@@ -727,7 +740,7 @@ function App() {
         triageProvider: payload.provider || 'Gemini',
         municipalAdapter: municipal.adapter,
       }
-      setReports((prev) => [newReport, ...prev])
+      setReports((prev) => retainRecentEvidence([newReport, ...prev]))
       setResult(newReport)
       clearImage()
       setNote('')
@@ -1219,12 +1232,12 @@ function App() {
                       <label htmlFor="report-image" className="flex min-h-[116px] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 p-3 text-center transition hover:border-emerald-400 hover:bg-emerald-50/40 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:border-emerald-600 dark:hover:bg-emerald-950/20">
                         {fileData ? <img src={fileData} alt="Preview of selected issue evidence" className="max-h-40 w-full rounded-xl object-cover" /> : <><CloudUpload size={25} className="text-slate-400" /><span className="mt-2 text-sm font-bold text-slate-700 dark:text-slate-200">Add a photo of the issue</span><span className="mt-1 text-xs text-slate-400">PNG, JPG or WEBP · up to 5 MB</span></>}
                       </label>
-                      {imageName && <p className="mt-1.5 truncate text-[10px] text-slate-500 dark:text-slate-400" title={imageName}>Selected: {imageName}</p>}
+                      {imageProcessing ? <p className="mt-1.5 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400" role="status">Optimizing photo for local storage…</p> : imageName && <p className="mt-1.5 truncate text-[10px] text-slate-500 dark:text-slate-400" title={imageName}>Selected: {imageName} · optimized copy</p>}
                   <p className="mt-1.5 text-[10px] text-slate-400">The image stays in this browser’s local demo storage.</p>
                     </div>
 
-                    <button type="submit" disabled={processing} className="btn-primary min-h-12 w-full text-sm">
-                      {processing ? (
+                    <button type="submit" disabled={processing || imageProcessing} className="btn-primary min-h-12 w-full text-sm">
+                      {imageProcessing ? (<>Optimizing photo…</>) : processing ? (
                         <>
                           <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                           Running AI triage…
@@ -1253,7 +1266,7 @@ function App() {
                       <ShieldCheck size={14} className="text-emerald-700 dark:text-emerald-400" /> Privacy-first prototype
                     </div>
                     <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                      Images are previewed and optionally stored as data URLs in localStorage for this demo only. Nothing is uploaded to a server.
+                      Images are resized and compressed before local storage. The five most recent reports retain photo evidence to keep browser storage usage bounded; nothing is uploaded to a server.
                     </p>
                   </div>
                 </div>

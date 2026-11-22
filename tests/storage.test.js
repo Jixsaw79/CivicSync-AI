@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { initialReports } from '../src/data.js'
-import { isValidStoredReport, loadStoredReports, readThemePreference } from '../src/storage.js'
+import { isValidStoredReport, loadStoredReports, readThemePreference, retainRecentEvidence } from '../src/storage.js'
 
 function mockStorage(value, shouldThrow = false) {
   return {
@@ -39,4 +39,16 @@ test('theme preference respects explicit saved choice and safely falls back', ()
   assert.equal(readThemePreference(mockStorage('light'), true), false)
   assert.equal(readThemePreference(mockStorage('unknown'), true), true)
   assert.equal(readThemePreference(mockStorage(null, true), false), false)
+})
+
+test('stored report loader retains only the five newest evidence images', () => {
+  const reports = Array.from({ length: 7 }, (_, index) => ({
+    ...initialReports[0],
+    id: 'CS-IMAGE-' + index,
+    imageData: 'data:image/jpeg;base64,AAAA',
+  }))
+  const retained = retainRecentEvidence(reports)
+  assert.equal(retained.filter((report) => report.imageData).length, 5)
+  assert.equal(retained[0].imageData, reports[0].imageData)
+  assert.equal(retained[5].imageData, null)
 })
