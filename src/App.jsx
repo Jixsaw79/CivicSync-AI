@@ -217,18 +217,62 @@ function ReportTable({ reports, onDispatch, onStart, onResolve, onSelect, canMan
   )
 }
 
-function ReportModal({ report, onClose }) {
+function useDialogAccessibility(open, onClose) {
+  const dialogRef = useRef(null)
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+
   useEffect(() => {
-    if (!report) return
-    const onKey = (e) => e.key === 'Escape' && onClose()
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [report, onClose])
+    if (!open) return
+    const previousFocus = document.activeElement
+    const focusableSelector = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    const getFocusable = () => Array.from(dialogRef.current?.querySelectorAll(focusableSelector) || [])
+    const firstFocusable = getFocusable()[0]
+    ;(firstFocusable || dialogRef.current)?.focus()
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        onCloseRef.current()
+        return
+      }
+      if (event.key !== 'Tab') return
+      const items = getFocusable()
+      if (!items.length) {
+        event.preventDefault()
+        dialogRef.current?.focus()
+        return
+      }
+      const first = items[0]
+      const last = items[items.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      if (previousFocus?.isConnected) previousFocus.focus()
+    }
+  }, [open])
+
+  return dialogRef
+}
+
+function ReportModal({ report, onClose }) {
+  const dialogRef = useDialogAccessibility(!!report, onClose)
 
   if (!report) return null
 
   return (
     <div
+      ref={dialogRef}
+      tabIndex={-1}
       className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm"
       onClick={onClose}
       role="dialog"
@@ -339,9 +383,18 @@ function ReportModal({ report, onClose }) {
 }
 
 function ConfirmDialog({ open, title, message, confirmLabel, onConfirm, onCancel }) {
+  const dialogRef = useDialogAccessibility(open, onCancel)
   if (!open) return null
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm" onClick={onCancel}>
+    <div
+      ref={dialogRef}
+      tabIndex={-1}
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm"
+      onClick={onCancel}
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+    >
       <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl dark:bg-slate-900 dark:border dark:border-slate-700" onClick={(e) => e.stopPropagation()}>
         <h3 className="font-display text-lg font-bold text-slate-900 dark:text-white">{title}</h3>
         <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{message}</p>
