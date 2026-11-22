@@ -81,3 +81,7 @@ npm run build
 ```
 
 The CI workflow should run the same checks on the pull request. A successful build does not mean that deployment secrets or Gemini connectivity have been configured.
+
+## Security posture
+
+See [SECURITY.md](SECURITY.md) for the prototype's security boundaries, deployment requirements and maintainer hardening checklist. This project is a public hackathon demo, not a production municipal reporting service.
