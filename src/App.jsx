@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import {
   Activity, AlertTriangle, ArrowDownRight, ArrowUpRight, Bell, Building2, ClipboardList,
-  Check, CheckCircle2, Clock3, CloudUpload, FileImage, Filter,
+  Check, CheckCircle2, Clock3, CloudUpload, Download, FileImage, Filter,
   Gauge, Layers3, Leaf, MapPin, Menu, MessageSquareText, Moon, Navigation,
-  Plus, Radio, Search, ShieldCheck, Sparkles, Sun, TrendingUp, Users, Wallet,
+  Plus, Radio, RotateCcw, Search, ShieldCheck, Sparkles, Sun, TrendingUp, Users, Wallet,
   X, Zap, Image as ImageIcon,
 } from 'lucide-react'
 import {
@@ -403,6 +403,7 @@ function App() {
     return window.matchMedia('(prefers-color-scheme: dark)').matches
   })
   const [confirmResolve, setConfirmResolve] = useState(null)
+  const [confirmReset, setConfirmReset] = useState(false)
   const [civicInsights, setCivicInsights] = useState(null)
   const [insightsLoading, setInsightsLoading] = useState(false)
   const [insightsError, setInsightsError] = useState('')
@@ -553,6 +554,39 @@ function App() {
     )
     notify(`Report ${confirmResolve} marked as resolved`)
     setConfirmResolve(null)
+  }
+
+  const resetDemoData = () => {
+    setReports(initialReports)
+    setSelectedReport(null)
+    setSelectedZone(null)
+    setSearch('')
+    setStatusFilter('All statuses')
+    setCategoryFilter('All categories')
+    setSeverityFilter('All priorities')
+    setConfirmReset(false)
+    notify('Demo data restored to the original sample dataset')
+  }
+
+  const exportReportsCsv = () => {
+    const columns = ['id', 'title', 'category', 'zone', 'severity', 'status', 'impact', 'cost', 'createdAt']
+    const safeCell = (value) => {
+      const text = String(value ?? '')
+      const protectedText = /^[=+@\\-\\t\\r]/.test(text) ? "'" + text : text
+      return '"' + protectedText.replace(/"/g, '""') + '"'
+    }
+    const rows = [columns, ...reports.map((report) => columns.map((key) => report[key] ?? ''))]
+    const csv = rows.map((row) => row.map(safeCell).join(',')).join('\\r\\n')
+    const blob = new Blob(['\\uFEFF', csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'civicsync-demo-reports.csv'
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+    notify('Report CSV exported')
   }
 
   const handleFileChange = (e) => {
@@ -974,6 +1008,26 @@ function App() {
                   )}
                 </div>
               </section>
+              <section className="mt-6 panel p-5" aria-labelledby="demo-controls-title">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <div className="eyebrow">Presentation utilities</div>
+                    <h3 id="demo-controls-title" className="mt-1 font-display text-lg font-extrabold text-slate-900 dark:text-white">Demo data controls</h3>
+                    <p className="mt-1 max-w-2xl text-sm text-slate-500 dark:text-slate-400">
+                      Export the current browser-local report snapshot or restore the original synthetic sample dataset.
+                    </p>
+                    <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">{reports.length} reports currently in this browser · Changes do not affect other users or devices.</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button onClick={exportReportsCsv} className="btn-secondary text-xs">
+                      <Download size={14} /> Export CSV
+                    </button>
+                    <button onClick={() => setConfirmReset(true)} className="btn-secondary text-xs">
+                      <RotateCcw size={14} /> Reset sample data
+                    </button>
+                  </div>
+                </div>
+              </section>
               <div className="mt-6 grid gap-6 xl:grid-cols-5">
                   <div className="panel p-5 xl:col-span-2">
                     <div className="eyebrow">Area overview</div>
@@ -1392,6 +1446,14 @@ function App() {
       </main>
 
       <ReportModal report={selectedReport} onClose={() => setSelectedReport(null)} />
+      <ConfirmDialog
+        open={confirmReset}
+        title="Restore the sample dataset?"
+        message="This replaces all report changes and citizen-submitted demo reports in this browser with the original synthetic sample records. This cannot be undone."
+        confirmLabel="Restore sample data"
+        onConfirm={resetDemoData}
+        onCancel={() => setConfirmReset(false)}
+      />
       <ConfirmDialog
         open={!!confirmResolve}
         title="Mark as resolved?"
