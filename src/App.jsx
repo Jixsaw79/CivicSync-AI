@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import {
   Activity, AlertTriangle, ArrowDownRight, ArrowUpRight, Bell, Building2, ClipboardList,
   Check, CheckCircle2, Clock3, CloudUpload, Download, FileImage, Filter,
@@ -11,7 +11,9 @@ import {
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts'
 import { allocationData, initialReports, zones } from './data'
-import MapView from './MapView'
+import { loadStoredReports, readThemePreference } from './storage'
+
+const MapView = lazy(() => import('./MapView'))
 
 const money = (value) => '$' + Number(value).toLocaleString('en-US')
 
@@ -102,7 +104,9 @@ function ZoneMap({ selected, onSelect, reports, onReportSelect }) {
           <span className="flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-full bg-rose-500" />High</span>
         </div>
       </div>
-      <MapView zones={zones} reports={reports} selected={selected} onSelect={(id) => onSelect(selected === id ? null : id)} onReportSelect={onReportSelect} />
+      <Suspense fallback={<div className="grid h-[390px] place-items-center bg-slate-50 text-sm text-slate-500 dark:bg-slate-800 dark:text-slate-400" role="status">Loading interactive map…</div>}>
+        <MapView zones={zones} reports={reports} selected={selected} onSelect={(id) => onSelect(selected === id ? null : id)} onReportSelect={onReportSelect} />
+      </Suspense>
       {selected && (
         <div className="mt-3 flex items-center justify-between rounded-xl bg-emerald-50 px-3 py-2.5 text-sm dark:bg-emerald-950/40">
           <span className="font-semibold text-emerald-900 dark:text-emerald-200">
@@ -410,21 +414,7 @@ function ConfirmDialog({ open, title, message, confirmLabel, onConfirm, onCancel
 function App() {
   const [reports, setReports] = useState(() => {
     try {
-      const saved = window.localStorage.getItem('civicsync-reports-v2')
-      if (!saved) return initialReports
-      const parsed = JSON.parse(saved)
-      return Array.isArray(parsed) &&
-        parsed.every(
-          (r) =>
-            r &&
-            typeof r.id === 'string' &&
-            typeof r.status === 'string' &&
-            typeof r.zoneId === 'string' &&
-            Number.isFinite(r.severity) &&
-            Number.isFinite(r.cost)
-        )
-        ? Array.from(new Map([...initialReports, ...parsed].map((report) => [report.id, report])).values())
-        : initialReports
+      return loadStoredReports(window.localStorage, initialReports)
     } catch {
       return initialReports
     }
@@ -451,9 +441,11 @@ function App() {
   const [toast, setToast] = useState('')
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window === 'undefined') return false
-    const saved = localStorage.getItem('civicsync-theme')
-    if (saved) return saved === 'dark'
-    return window.matchMedia('(prefers-color-scheme: dark)').matches
+    try {
+      return readThemePreference(window.localStorage, window.matchMedia('(prefers-color-scheme: dark)').matches)
+    } catch {
+      return false
+    }
   })
   const [confirmResolve, setConfirmResolve] = useState(null)
   const [confirmReset, setConfirmReset] = useState(false)
@@ -466,12 +458,12 @@ function App() {
 
   useEffect(() => {
     const root = document.documentElement
-    if (darkMode) {
-      root.classList.add('dark')
-      localStorage.setItem('civicsync-theme', 'dark')
-    } else {
-      root.classList.remove('dark')
-      localStorage.setItem('civicsync-theme', 'light')
+    if (darkMode) root.classList.add('dark')
+    else root.classList.remove('dark')
+    try {
+      window.localStorage.setItem('civicsync-theme', darkMode ? 'dark' : 'light')
+    } catch {
+      // Theme preference remains usable when browser storage is unavailable.
     }
   }, [darkMode])
 
