@@ -10,6 +10,17 @@ test('the prototype starts with a populated, varied demonstration dataset', () =
   assert.ok(initialReports.some(report => report.severity >= 85))
 })
 
+test('demo reports have valid zones, severities and workflow statuses for the map', () => {
+  const zoneIds = new Set(zones.map(zone => zone.id))
+  const validStatuses = new Set(['Pending', 'Assigned', 'Dispatched', 'In progress', 'Resolved'])
+  assert.ok(initialReports.length >= 22)
+  for (const report of initialReports) {
+    assert.ok(zoneIds.has(report.zoneId), `unknown zone for ${report.id}`)
+    assert.ok(report.severity >= 0 && report.severity <= 100, `invalid severity for ${report.id}`)
+    assert.ok(validStatuses.has(report.status), `invalid status for ${report.id}`)
+  }
+})
+
 test('zone identifiers are unique and population values are positive', () => {
   const ids = zones.map(zone => zone.id)
   assert.equal(new Set(ids).size, ids.length)
