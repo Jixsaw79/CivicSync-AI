@@ -7,6 +7,7 @@ const statuses = new Set(['Pending', 'Assigned', 'Dispatched', 'In progress', 'R
 const categories = new Set(['Road damage', 'Waterlogging', 'Streetlight', 'Waste accumulation', 'Other'])
 const allowedFields = new Set(['id', 'title', 'category', 'zone', 'zoneId', 'severity', 'impact', 'status', 'age', 'createdAt'])
 const MAX_BODY_BYTES = 256 * 1024
+const MAX_REPORTS = 500
 const MAX_IMPACT = 1_000_000_000
 
 function send(res, status, body) {
@@ -121,8 +122,8 @@ export default function handler(req, res) {
   if (exceedsBodyLimit(req, MAX_BODY_BYTES)) return send(res, 413, { error: 'Request body is too large.' })
 
   const reports = req.body?.reports
-  if (!Array.isArray(reports) || reports.length < 1 || reports.length > 250) {
-    return send(res, 400, { error: 'Reports must be an array containing 1–250 items.' })
+  if (!Array.isArray(reports) || reports.length < 1 || reports.length > MAX_REPORTS) {
+    return send(res, 400, { error: 'Reports must be an array containing 1–500 items.' })
   }
   if (!reports.every(isValidReport)) return send(res, 400, { error: 'A report contains invalid or unsupported fields.' })
   if (new Set(reports.map((report) => report.id)).size !== reports.length) {

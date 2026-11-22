@@ -4,7 +4,7 @@ const validStatuses = new Set(['Pending', 'Assigned', 'Dispatched', 'In progress
 const validCategories = new Set(['Road damage', 'Waterlogging', 'Streetlight', 'Waste accumulation', 'Other'])
 const zoneIds = new Set(zones.map((zone) => zone.id))
 const MAX_STORED_REPORTS = 500
-const MAX_IMAGE_DATA_LENGTH = 600 * 1024
+const MAX_IMAGE_DATA_LENGTH = 620 * 1024
 const MAX_STORED_EVIDENCE_IMAGES = 5
 
 function boundedString(value, maxLength, allowEmpty = true) {
@@ -95,7 +95,7 @@ export function readThemePreference(storage, prefersDark = false) {
 
 export function retainRecentEvidence(reports, maxImages = MAX_STORED_EVIDENCE_IMAGES) {
   let retained = 0
-  return reports.map((report) => {
+  return reports.slice(0, MAX_STORED_REPORTS).map((report) => {
     if (!report.imageData) return report
     retained += 1
     return retained <= maxImages ? report : { ...report, imageData: null }
