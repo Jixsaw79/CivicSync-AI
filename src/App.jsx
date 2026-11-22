@@ -293,14 +293,46 @@ function ReportModal({ report, onClose }) {
           </div>
         </div>
 
-        <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 p-3 dark:border-emerald-900 dark:bg-emerald-950/30">
-          <div className="flex items-center gap-2 text-xs font-bold text-emerald-800 dark:text-emerald-300">
-            <Sparkles size={14} /> AI triage recommendation
+        {report.aiSummary ? (
+          <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 p-3 dark:border-emerald-900 dark:bg-emerald-950/30">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                <Sparkles size={14} /> AI triage · {report.triageProvider || 'Gemini'}
+              </div>
+              {Number.isFinite(report.confidence) && (
+                <span className="rounded-full bg-white/80 px-2 py-1 text-[10px] font-bold text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200">
+                  {Math.round(report.confidence * 100)}% confidence
+                </span>
+              )}
+            </div>
+            <p className="mt-2 text-sm leading-5 text-emerald-950 dark:text-emerald-100">{report.aiSummary}</p>
+            <p className="mt-2 text-xs text-emerald-900 dark:text-emerald-200">
+              Severity score {report.severity}/100 · {report.duplicate}
+            </p>
+            {Array.isArray(report.safetyFlags) && report.safetyFlags.length > 0 && (
+              <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-2 dark:border-amber-900 dark:bg-amber-950/40">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">Safety flags for staff review</div>
+                <ul className="mt-1 list-disc space-y-1 pl-4 text-xs text-amber-900 dark:text-amber-200">
+                  {report.safetyFlags.map((flag, index) => <li key={index}>{flag}</li>)}
+                </ul>
+              </div>
+            )}
+            <div className="mt-3 flex items-start gap-2 rounded-lg bg-white/70 p-2 text-xs text-emerald-900 dark:bg-slate-900/50 dark:text-emerald-200">
+              <ShieldCheck size={14} className="mt-0.5 shrink-0" />
+              <span>AI-generated decision support only. A staff member must verify the classification, severity and safety flags before taking action.</span>
+            </div>
           </div>
-          <p className="mt-1 text-sm text-emerald-900 dark:text-emerald-200">
-            Severity score {report.severity}/100 · {report.duplicate}
-          </p>
-        </div>
+        ) : (
+          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/70">
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-200">
+              <Sparkles size={14} /> Synthetic demo triage
+            </div>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+              Severity score {report.severity}/100 · {report.duplicate}
+            </p>
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">This sample record was not analyzed by Gemini. Its values are illustrative and require human review.</p>
+          </div>
+        )}
       </div>
     </div>
   )
