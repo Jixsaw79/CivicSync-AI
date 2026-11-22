@@ -52,3 +52,14 @@ test('stored report loader retains only the five newest evidence images', () => 
   assert.equal(retained[0].imageData, reports[0].imageData)
   assert.equal(retained[5].imageData, null)
 })
+
+test('report retention caps the active demo dataset at 500 newest reports', () => {
+  const reports = Array.from({ length: 510 }, (_, index) => ({
+    ...initialReports[0],
+    id: 'CS-LIMIT-' + index,
+  }))
+  const retained = retainRecentEvidence(reports)
+  assert.equal(retained.length, 500)
+  assert.equal(retained[0].id, 'CS-LIMIT-0')
+  assert.equal(retained[499].id, 'CS-LIMIT-499')
+})

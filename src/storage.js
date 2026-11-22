@@ -95,7 +95,7 @@ export function readThemePreference(storage, prefersDark = false) {
 
 export function retainRecentEvidence(reports, maxImages = MAX_STORED_EVIDENCE_IMAGES) {
   let retained = 0
-  return reports.map((report) => {
+  return reports.slice(0, MAX_STORED_REPORTS).map((report) => {
     if (!report.imageData) return report
     retained += 1
     return retained <= maxImages ? report : { ...report, imageData: null }
