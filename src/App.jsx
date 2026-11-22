@@ -371,6 +371,9 @@ function App() {
     return window.matchMedia('(prefers-color-scheme: dark)').matches
   })
   const [confirmResolve, setConfirmResolve] = useState(null)
+  const [civicInsights, setCivicInsights] = useState(null)
+  const [insightsLoading, setInsightsLoading] = useState(false)
+  const [insightsError, setInsightsError] = useState('')
 
   const fileRef = useRef(null)
   const toastTimer = useRef(null)
@@ -402,6 +405,31 @@ function App() {
     if (fileData) URL.revokeObjectURL(fileData)
   }, [fileData])
 
+  useEffect(() => {
+    if (activeView !== 'intelligence' || demoRole !== 'admin') return
+    let cancelled = false
+    const loadInsights = async () => {
+      setInsightsLoading(true)
+      setInsightsError('')
+      try {
+        const response = await fetch('/api/demo/insights', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reports: reports.map(({ id, title, category, zone, zoneId, severity, impact, status, age, createdAt }) => ({ id, title, category, zone, zoneId, severity, impact, status, age, createdAt })) }),
+        })
+        const payload = await response.json().catch(() => ({}))
+        if (!response.ok) throw new Error(payload.error || 'Civic insights could not be generated.')
+        if (!payload.insights || !Array.isArray(payload.insights.priorities)) throw new Error('The insights service returned an unexpected response.')
+        if (!cancelled) setCivicInsights(payload.insights)
+      } catch (error) {
+        if (!cancelled) setInsightsError(error.message || 'Civic insights are temporarily unavailable.')
+      } finally {
+        if (!cancelled) setInsightsLoading(false)
+      }
+    }
+    loadInsights()
+    return () => { cancelled = true }
+  }, [activeView, demoRole, reports])
   const activeReports = useMemo(() => reports.filter((r) => r.status !== 'Resolved'), [reports])
   const resolvedReports = useMemo(() => reports.filter((r) => r.status === 'Resolved'), [reports])
   const criticalReports = useMemo(() => activeReports.filter((r) => r.severity >= 85), [activeReports])
@@ -861,7 +889,60 @@ function App() {
                     </div>
                   </div>
                 </div>
-                <div className="mt-6 grid gap-6 xl:grid-cols-5">
+                <section className="mt-6 space-y-5">
+                <div className="panel p-5">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <div className="eyebrow flex items-center gap-2"><Sparkles size={13} /> Rule-based civic insights</div>
+                      <h3 className="mt-1 font-display text-lg font-extrabold text-slate-900 dark:text-white">What needs attention?</h3>
+                      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Analysis of the current browser-local demonstration reports.</p>
+                    </div>
+                    <span className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">Auto-updates with report changes</span>
+                  </div>
+                  {insightsLoading && !civicInsights && <p className="mt-4 text-sm text-slate-500">Analyzing the current report snapshot…</p>}
+                  {insightsError && <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-200">{insightsError} The existing dashboard metrics remain available.</div>}
+                  {civicInsights && (
+                    <>
+                      <p className="mt-4 rounded-xl bg-emerald-50 p-4 text-sm leading-6 text-emerald-950 dark:bg-emerald-950/30 dark:text-emerald-100">{civicInsights.summary}</p>
+                      <div className="mt-4 grid gap-4 md:grid-cols-2">
+                        <div className="rounded-xl border border-slate-100 p-4 dark:border-slate-800">
+                          <div className="eyebrow">Most common open categories</div>
+                          <div className="mt-3 space-y-2">
+                            {civicInsights.patterns.categories.slice(0, 4).map((item) => <div key={item.name} className="flex items-center justify-between gap-3 text-sm"><span className="text-slate-600 dark:text-slate-300">{item.name}</span><strong className="text-slate-900 dark:text-white">{item.count}</strong></div>)}
+                            {civicInsights.patterns.categories.length === 0 && <p className="text-xs text-slate-400">No open category patterns.</p>}
+                          </div>
+                        </div>
+                        <div className="rounded-xl border border-slate-100 p-4 dark:border-slate-800">
+                          <div className="eyebrow">Zones with most open reports</div>
+                          <div className="mt-3 space-y-2">
+                            {civicInsights.patterns.zones.slice(0, 4).map((item) => <div key={item.name} className="flex items-center justify-between gap-3 text-sm"><span className="text-slate-600 dark:text-slate-300">{item.name}</span><strong className="text-slate-900 dark:text-white">{item.count}</strong></div>)}
+                            {civicInsights.patterns.zones.length === 0 && <p className="text-xs text-slate-400">No open zone patterns.</p>}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="mt-5">
+                        <div className="eyebrow">Recommended review order</div>
+                        <div className="mt-3 space-y-2">
+                          {civicInsights.priorities.map((item, index) => (
+                            <button type="button" key={item.id} onClick={() => { const report = reports.find((entry) => entry.id === item.id); if (report) setSelectedReport(report) }} className="flex w-full flex-col gap-2 rounded-xl border border-slate-100 p-3 text-left transition hover:border-emerald-300 hover:bg-emerald-50/40 sm:flex-row sm:items-center dark:border-slate-800 dark:hover:border-emerald-800 dark:hover:bg-emerald-950/20">
+                              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-slate-100 text-xs font-extrabold text-slate-700 dark:bg-slate-800 dark:text-slate-200">{index + 1}</span>
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate text-sm font-bold text-slate-900 dark:text-white">{item.title}</span>
+                                <span className="mt-1 block text-xs text-slate-500 dark:text-slate-400">{item.category} · {item.zone} · {item.status}</span>
+                                <span className="mt-1 block text-xs leading-5 text-slate-500 dark:text-slate-400">{item.reasons.join(' · ')}</span>
+                              </span>
+                              <span className={'shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-extrabold ' + severityTone(item.priorityScore)}>Score {item.priorityScore}</span>
+                            </button>
+                          ))}
+                          {civicInsights.priorities.length === 0 && <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-500 dark:bg-slate-800 dark:text-slate-400">No open reports currently need prioritization.</p>}
+                        </div>
+                      </div>
+                      <p className="mt-4 text-[11px] leading-5 text-slate-400">Scoring: 60% severity, 25% relative estimated impact, 15% report age (maximum 72 hours). Generated {new Date(civicInsights.generatedAt).toLocaleString()}.</p>
+                    </>
+                  )}
+                </div>
+              </section>
+              <div className="mt-6 grid gap-6 xl:grid-cols-5">
                   <div className="panel p-5 xl:col-span-2">
                     <div className="eyebrow">Area overview</div>
                     <h3 className="mt-1 font-display text-lg font-extrabold text-slate-900 dark:text-white">Reports by demo zone</h3>
