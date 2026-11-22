@@ -2,6 +2,14 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { allocationData, departmentFor, initialReports, severityFor, zones } from '../src/data.js'
 
+test('the prototype starts with a populated, varied demonstration dataset', () => {
+  assert.ok(initialReports.length >= 20)
+  assert.equal(new Set(initialReports.map(report => report.id)).size, initialReports.length)
+  assert.ok(initialReports.some(report => report.status === 'Resolved'))
+  assert.ok(initialReports.some(report => report.status === 'In progress'))
+  assert.ok(initialReports.some(report => report.severity >= 85))
+})
+
 test('zone identifiers are unique and population values are positive', () => {
   const ids = zones.map(zone => zone.id)
   assert.equal(new Set(ids).size, ids.length)

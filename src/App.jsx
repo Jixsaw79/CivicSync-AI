@@ -325,7 +325,7 @@ function ConfirmDialog({ open, title, message, confirmLabel, onConfirm, onCancel
 function App() {
   const [reports, setReports] = useState(() => {
     try {
-      const saved = window.localStorage.getItem('civicsync-reports-v1')
+      const saved = window.localStorage.getItem('civicsync-reports-v2') || window.localStorage.getItem('civicsync-reports-v2')
       if (!saved) return initialReports
       const parsed = JSON.parse(saved)
       return Array.isArray(parsed) &&
@@ -386,7 +386,7 @@ function App() {
 
   useEffect(() => {
     try {
-      window.localStorage.setItem('civicsync-reports-v1', JSON.stringify(reports))
+      window.localStorage.setItem('civicsync-reports-v2', JSON.stringify(reports))
     } catch {
       /* Storage may be unavailable or full. */
     }
@@ -422,7 +422,8 @@ function App() {
     return Object.entries(totals).map(([name, value]) => ({ name, value }))
   }, [reports])
   const statusSummary = useMemo(() => [
-    { name: 'Pending', value: reports.filter((r) => r.status === 'Pending' || r.status === 'Assigned').length },
+    { name: 'Pending', value: reports.filter((r) => r.status === 'Pending').length },
+    { name: 'Assigned', value: reports.filter((r) => r.status === 'Assigned').length },
     { name: 'Dispatched', value: reports.filter((r) => r.status === 'Dispatched').length },
     { name: 'In progress', value: reports.filter((r) => r.status === 'In progress').length },
     { name: 'Resolved', value: resolvedReports.length },
@@ -668,7 +669,7 @@ function App() {
               <div className="hidden h-8 w-px bg-slate-200 dark:bg-slate-700 sm:block" />
               <label className="hidden items-center gap-2 sm:flex">
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Demo role</span>
-                <select value={demoRole} onChange={(event) => { setDemoRole(event.target.value); if (event.target.value !== "admin" && activeView === "optimizer") setActiveView("overview") }} className="field w-auto py-2 text-xs" aria-label="Switch simulated demo role">
+                <select value={demoRole} onChange={(event) => { setDemoRole(event.target.value); if (event.target.value !== "admin" && (activeView === "optimizer" || activeView === "intelligence")) setActiveView("overview") }} className="field w-auto py-2 text-xs" aria-label="Switch simulated demo role">
                   <option value="citizen">Citizen</option>
                   <option value="staff">Department staff</option>
                   <option value="admin">Administrator</option>
@@ -953,7 +954,7 @@ function App() {
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie data={statusSummary} dataKey="value" nameKey="name" innerRadius={58} outerRadius={88} paddingAngle={3}>
-                          {statusSummary.map((entry, index) => <Cell key={entry.name} fill={['#f59e0b', '#0ea5e9', '#8b5cf6', '#10b981'][index]} />)}
+                          {statusSummary.map((entry, index) => <Cell key={entry.name} fill={['#f59e0b', '#64748b', '#0ea5e9', '#8b5cf6', '#10b981'][index]} />)}
                         </Pie>
                         <Tooltip />
                       </PieChart>
