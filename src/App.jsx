@@ -6,15 +6,12 @@ import {
   Plus, Radio, RotateCcw, Search, ShieldCheck, Sparkles, Sun, TrendingUp, Users, Wallet,
   X, Zap, Image as ImageIcon,
 } from 'lucide-react'
-import {
-  Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart,
-  ResponsiveContainer, Tooltip, XAxis, YAxis,
-} from 'recharts'
 import { allocationData, initialReports, zones } from './data'
 import { loadStoredReports, readThemePreference, retainRecentEvidence } from './storage'
 import { buildReportsCsv } from './csv'
 
 const MapView = lazy(() => import('./MapView'))
+const ChartRenderer = lazy(() => import('./ChartRenderer'))
 
 async function optimizeEvidenceImage(file) {
   const bitmap = await createImageBitmap(file)
@@ -1020,29 +1017,18 @@ function App() {
                     <div className="eyebrow">Service demand</div>
                     <h3 className="mt-1 font-display text-lg font-extrabold text-slate-900 dark:text-white">Reports by issue type</h3>
                     <div className="mt-4 h-64">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={categoryData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                          <XAxis dataKey="category" tick={{ fontSize: 11 }} />
-                          <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                          <Tooltip />
-                          <Bar dataKey="reports" name="Reports" fill="#059669" radius={[6, 6, 0, 0]} />
-                        </BarChart>
-                      </ResponsiveContainer>
+                      <Suspense fallback={<div className="grid h-full place-items-center text-xs text-slate-400" role="status">Loading chart…</div>}>
+                        <ChartRenderer type="category" data={categoryData} />
+                      </Suspense>
                     </div>
                   </div>
                   <div className="panel p-5">
                     <div className="eyebrow">Response progress</div>
                     <h3 className="mt-1 font-display text-lg font-extrabold text-slate-900 dark:text-white">Current report statuses</h3>
                     <div className="mt-4 h-64">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie data={statusData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={58} outerRadius={92} paddingAngle={3}>
-                            {statusData.map((entry, index) => <Cell key={entry.name} fill={palette[index % palette.length]} />)}
-                          </Pie>
-                          <Tooltip />
-                        </PieChart>
-                      </ResponsiveContainer>
+                      <Suspense fallback={<div className="grid h-full place-items-center text-xs text-slate-400" role="status">Loading chart…</div>}>
+                        <ChartRenderer type="status" data={statusData} palette={palette} />
+                      </Suspense>
                     </div>
                     <div className="flex flex-wrap justify-center gap-x-4 gap-y-2">
                       {statusData.map((entry, index) => <span key={entry.name} className="inline-flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400"><i className="h-2 w-2 rounded-full" style={{ background: palette[index % palette.length] }} />{entry.name} · {entry.value}</span>)}
@@ -1394,30 +1380,18 @@ function App() {
                   <div className="eyebrow">Department workload</div>
                   <h3 className="mt-1 font-display text-lg font-extrabold text-slate-900 dark:text-white">Reports by responsible unit</h3>
                   <div className="mt-5 h-72">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={departmentSummary} layout="vertical" margin={{ top: 4, right: 18, left: 18, bottom: 4 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" className="dark:stroke-slate-700" />
-                        <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
-                        <YAxis type="category" dataKey="department" width={125} tick={{ fontSize: 10 }} />
-                        <Tooltip />
-                        <Bar dataKey="open" name="Open" stackId="reports" fill="#0d9488" radius={[0, 4, 4, 0]} />
-                        <Bar dataKey="resolved" name="Resolved" stackId="reports" fill="#94a3b8" radius={[0, 4, 4, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                    <Suspense fallback={<div className="grid h-full place-items-center text-xs text-slate-400" role="status">Loading chart…</div>}>
+                      <ChartRenderer type="department" data={departmentSummary} />
+                    </Suspense>
                   </div>
                 </div>
                 <div className="panel p-5 xl:col-span-2">
                   <div className="eyebrow">Service status</div>
                   <h3 className="mt-1 font-display text-lg font-extrabold text-slate-900 dark:text-white">Complaint lifecycle</h3>
                   <div className="mt-5 h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie data={statusSummary} dataKey="value" nameKey="name" innerRadius={58} outerRadius={88} paddingAngle={3}>
-                          {statusSummary.map((entry, index) => <Cell key={entry.name} fill={['#f59e0b', '#64748b', '#0ea5e9', '#8b5cf6', '#10b981'][index]} />)}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
+                    <Suspense fallback={<div className="grid h-full place-items-center text-xs text-slate-400" role="status">Loading chart…</div>}>
+                      <ChartRenderer type="lifecycle" data={statusSummary} />
+                    </Suspense>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     {statusSummary.map((entry) => (
@@ -1459,23 +1433,9 @@ function App() {
                   <div className="eyebrow">Budget allocation</div>
                   <h3 className="mt-1 font-display text-lg font-extrabold text-slate-900 dark:text-white">Traditional vs optimized</h3>
                   <div className="mt-5 h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={allocationData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" className="dark:stroke-slate-700" />
-                        <XAxis dataKey="zone" tick={{ fontSize: 11 }} />
-                        <YAxis tick={{ fontSize: 11 }} />
-                        <Tooltip
-                          contentStyle={{
-                            borderRadius: 12,
-                            border: '1px solid #e2e8f0',
-                            background: darkMode ? '#1e293b' : '#fff',
-                            color: darkMode ? '#e2e8f0' : '#0f172a',
-                          }}
-                        />
-                        <Bar dataKey="traditional" name="Traditional" fill="#94a3b8" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="optimized" name="Optimized" fill="#059669" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                    <Suspense fallback={<div className="grid h-full place-items-center text-xs text-slate-400" role="status">Loading chart…</div>}>
+                      <ChartRenderer type="allocation" data={allocationData} darkMode={darkMode} />
+                    </Suspense>
                   </div>
                   <div className="mt-4 flex items-center justify-between text-sm">
                     <span className="text-slate-500 dark:text-slate-400">Total traditional: {manualTotal} units</span>
