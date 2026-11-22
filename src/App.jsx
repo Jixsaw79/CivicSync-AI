@@ -338,7 +338,7 @@ function App() {
             Number.isFinite(r.severity) &&
             Number.isFinite(r.cost)
         )
-        ? parsed
+        ? Array.from(new Map([...initialReports, ...parsed].map((report) => [report.id, report])).values())
         : initialReports
     } catch {
       return initialReports
