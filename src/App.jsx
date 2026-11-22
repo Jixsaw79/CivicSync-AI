@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import {
-  Activity, AlertTriangle, ArrowDownRight, ArrowUpRight, Bell, Building2,
+  Activity, AlertTriangle, ArrowDownRight, ArrowUpRight, Bell, Building2, ClipboardList,
   Check, CheckCircle2, Clock3, CloudUpload, FileImage, Filter,
   Gauge, Layers3, Leaf, MapPin, Menu, MessageSquareText, Moon, Navigation,
   Plus, Radio, Search, ShieldCheck, Sparkles, Sun, TrendingUp, Users, Wallet,
@@ -428,6 +428,11 @@ function App() {
     { name: 'In progress', value: reports.filter((r) => r.status === 'In progress').length },
     { name: 'Resolved', value: resolvedReports.length },
   ], [reports, resolvedReports])
+  const myReports = useMemo(
+    () => reports.filter((report) => report.citizenId === 'demo-citizen').sort((a, b) => new Date(b.createdAt || b.history?.[0]?.at || 0) - new Date(a.createdAt || a.history?.[0]?.at || 0)),
+    [reports]
+  )
+
   const filteredReports = useMemo(
     () =>
       activeReports
@@ -549,6 +554,8 @@ function App() {
       const id = `CS-${nextId}`
       const newReport = {
         id,
+        citizenId: 'demo-citizen',
+        createdAt: new Date().toISOString(),
         title: triage.summary || note.trim().slice(0, 58),
         category: triage.category,
         zone: zone.name,
@@ -587,6 +594,7 @@ function App() {
   const nav = [
     { id: 'overview', label: 'Overview', icon: Layers3 },
     { id: 'reports', label: demoRole === 'staff' ? 'Work queue' : 'Issue reports', icon: MessageSquareText },
+    ...(demoRole === 'citizen' ? [{ id: 'my-reports', label: 'My reports', icon: ClipboardList }] : []),
     ...(demoRole === 'admin' ? [
       { id: 'intelligence', label: 'City intelligence', icon: TrendingUp },
       { id: 'optimizer', label: 'Resource optimizer', icon: Wallet },
@@ -669,7 +677,7 @@ function App() {
               <div className="hidden h-8 w-px bg-slate-200 dark:bg-slate-700 sm:block" />
               <label className="hidden items-center gap-2 sm:flex">
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Demo role</span>
-                <select value={demoRole} onChange={(event) => { setDemoRole(event.target.value); if (event.target.value !== "admin" && (activeView === "optimizer" || activeView === "intelligence")) setActiveView("overview") }} className="field w-auto py-2 text-xs" aria-label="Switch simulated demo role">
+                <select value={demoRole} onChange={(event) => { setDemoRole(event.target.value); if ((event.target.value !== "admin" && (activeView === "optimizer" || activeView === "intelligence")) || (event.target.value !== "citizen" && activeView === "my-reports")) setActiveView("overview") }} className="field w-auto py-2 text-xs" aria-label="Switch simulated demo role">
                   <option value="citizen">Citizen</option>
                   <option value="staff">Department staff</option>
                   <option value="admin">Administrator</option>
@@ -705,13 +713,15 @@ function App() {
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" /> Dhaka North · Civic issue intelligence
               </div>
               <h1 className="mt-2 font-display text-2xl font-extrabold tracking-tight text-slate-950 sm:text-3xl dark:text-white">
-                {activeView === 'overview' ? 'Executive overview' : activeView === 'reports' ? (demoRole === 'staff' ? 'Department work queue' : 'Citizen issue reports') : activeView === 'intelligence' ? 'City intelligence' : 'Budget & resource optimizer'}
+                {activeView === 'overview' ? 'Executive overview' : activeView === 'reports' ? (demoRole === 'staff' ? 'Department work queue' : 'Citizen issue reports') : activeView === 'my-reports' ? 'My submitted reports' : activeView === 'intelligence' ? 'City intelligence' : 'Budget & resource optimizer'}
               </h1>
               <p className="mt-1.5 max-w-2xl text-sm text-slate-500 dark:text-slate-400">
                 {activeView === 'overview'
                   ? 'A unified view of urban infrastructure health, service demand and response priorities.'
                   : activeView === 'reports'
                   ? (demoRole === 'staff' ? 'Review assigned civic issues and move work through the department response workflow.' : 'Explore community reports, inspect AI triage and submit a new civic issue.')
+                  : activeView === 'my-reports'
+                  ? 'Track the status and response history of reports submitted in this browser’s citizen demo session.'
                   : activeView === 'intelligence'
                   ? 'Explore issue patterns and department workload using the prototype’s synthetic demonstration dataset.'
                   : 'Compare allocation strategies and direct maintenance resources where they create the highest impact.'}
@@ -921,6 +931,85 @@ function App() {
             </>
           )}
 
+
+          {activeView === 'my-reports' && demoRole === 'citizen' && (
+            <section aria-labelledby="my-reports-heading">
+              <div className="mb-5 grid gap-4 sm:grid-cols-3">
+                <div className="panel p-4">
+                  <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">Total submitted</div>
+                  <div className="mt-2 font-display text-2xl font-extrabold text-slate-900 dark:text-white">{myReports.length}</div>
+                </div>
+                <div className="panel p-4">
+                  <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">Awaiting action</div>
+                  <div className="mt-2 font-display text-2xl font-extrabold text-amber-600">{myReports.filter((report) => report.status !== 'Resolved').length}</div>
+                </div>
+                <div className="panel p-4">
+                  <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">Resolved</div>
+                  <div className="mt-2 font-display text-2xl font-extrabold text-emerald-600">{myReports.filter((report) => report.status === 'Resolved').length}</div>
+                </div>
+              </div>
+
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 id="my-reports-heading" className="font-display text-lg font-extrabold text-slate-900 dark:text-white">Your report activity</h2>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Updates are stored in this browser for the demonstration.</p>
+                </div>
+                <button onClick={() => setActiveView('reports')} className="btn-primary">
+                  <Plus size={15} /> Submit another issue
+                </button>
+              </div>
+
+              {myReports.length === 0 ? (
+                <div className="panel flex flex-col items-center px-6 py-14 text-center">
+                  <span className="grid h-14 w-14 place-items-center rounded-2xl bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                    <ClipboardList size={25} />
+                  </span>
+                  <h3 className="mt-4 font-display text-lg font-extrabold text-slate-900 dark:text-white">No reports submitted yet</h3>
+                  <p className="mt-2 max-w-md text-sm leading-6 text-slate-500 dark:text-slate-400">When you submit an issue through the citizen demo, it will appear here with its reference number, current status and response timeline.</p>
+                  <button onClick={() => setActiveView('reports')} className="btn-primary mt-5">
+                    <Plus size={15} /> Report a civic issue
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {myReports.map((report) => (
+                    <article key={report.id} className="panel p-5">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="rounded-md bg-slate-100 px-2 py-1 text-[10px] font-extrabold tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">{report.id}</span>
+                            <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 ring-inset ${statusStyles[report.status] || statusStyles.Pending}`}>{report.status}</span>
+                          </div>
+                          <h3 className="mt-3 font-display text-base font-extrabold text-slate-900 dark:text-white">{report.title}</h3>
+                          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{report.category} · {report.zone} · Submitted {new Date(report.createdAt || report.history?.[0]?.at || Date.now()).toLocaleString()}</p>
+                        </div>
+                        <button onClick={() => setSelectedReport(report)} className="btn-secondary shrink-0 text-xs">View details <ArrowUpRight size={14} /></button>
+                      </div>
+
+                      <div className="mt-5 border-t border-slate-100 pt-4 dark:border-slate-800">
+                        <div className="mb-3 text-[10px] font-bold uppercase tracking-wider text-slate-400">Response timeline</div>
+                        <div className="grid gap-3 sm:grid-cols-3">
+                          {(report.history?.length ? report.history : [{ status: 'Submitted', note: 'Report received.' }]).map((entry, index) => (
+                            <div key={entry.status + index} className="flex gap-2.5">
+                              <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${index === (report.history?.length || 1) - 1 ? 'bg-emerald-500 ring-4 ring-emerald-100 dark:ring-emerald-950' : 'bg-slate-300 dark:bg-slate-600'}`} />
+                              <div className="min-w-0">
+                                <div className="text-xs font-bold text-slate-800 dark:text-slate-100">{entry.status}</div>
+                                <p className="mt-0.5 text-[11px] leading-5 text-slate-500 dark:text-slate-400">{entry.note}</p>
+                                {entry.at && <p className="mt-1 text-[10px] text-slate-400">{new Date(entry.at).toLocaleString()}</p>}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+              <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs leading-5 text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+                <strong>Demo privacy note:</strong> This is a browser-local citizen profile, not a verified account. Reports are not synced across devices or shared with DNCC.
+              </div>
+            </section>
+          )}
 
           {activeView === 'intelligence' && demoRole === 'admin' && (
             <>
