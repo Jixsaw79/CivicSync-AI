@@ -219,6 +219,8 @@ function ReportTable({ reports, onDispatch, onStart, onResolve, onSelect, canMan
 
 function useDialogAccessibility(open, onClose) {
   const dialogRef = useRef(null)
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
 
   useEffect(() => {
     if (!open) return
@@ -231,7 +233,7 @@ function useDialogAccessibility(open, onClose) {
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') {
         event.preventDefault()
-        onClose()
+        onCloseRef.current()
         return
       }
       if (event.key !== 'Tab') return
@@ -257,7 +259,7 @@ function useDialogAccessibility(open, onClose) {
       document.removeEventListener('keydown', handleKeyDown)
       if (previousFocus?.isConnected) previousFocus.focus()
     }
-  }, [open, onClose])
+  }, [open])
 
   return dialogRef
 }
