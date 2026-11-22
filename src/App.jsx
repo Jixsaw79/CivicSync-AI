@@ -791,6 +791,102 @@ function App() {
             </>
           )}
 
+          {activeView === 'public' && (() => {
+            const total = reports.length
+            const resolved = reports.filter((r) => r.status === 'Resolved').length
+            const open = total - resolved
+            const resolutionRate = total ? Math.round((resolved / total) * 100) : 0
+            const statusOrder = ['Pending', 'Assigned', 'Dispatched', 'In progress', 'Resolved']
+            const statusData = statusOrder.map((status) => ({
+              name: status,
+              value: reports.filter((r) => r.status === status).length,
+            })).filter((item) => item.value > 0)
+            const categories = ['Road damage', 'Waterlogging', 'Streetlight', 'Waste accumulation']
+            const categoryData = categories.map((category) => ({
+              category: category === 'Waste accumulation' ? 'Waste' : category === 'Road damage' ? 'Roads' : category,
+              reports: reports.filter((r) => r.category === category).length,
+            }))
+            const zonesByVolume = zones.map((zone) => ({
+              ...zone,
+              count: reports.filter((r) => r.zoneId === zone.id).length,
+            })).sort((a, b) => b.count - a.count)
+            const latest = [...reports].slice(0, 8)
+            const palette = ['#d97706', '#0284c7', '#059669', '#7c3aed', '#64748b']
+            return (
+              <>
+                <div className="mb-5 flex items-start gap-3 rounded-2xl border border-sky-200 bg-sky-50 p-4 dark:border-sky-900 dark:bg-sky-950/30">
+                  <ShieldCheck size={19} className="mt-0.5 shrink-0 text-sky-700 dark:text-sky-300" />
+                  <div>
+                    <div className="text-sm font-bold text-sky-900 dark:text-sky-200">Public information · Read-only view</div>
+                    <p className="mt-1 text-xs leading-5 text-sky-800 dark:text-sky-300">This dashboard summarizes the prototype's local demonstration records. It is not an official DNCC publication, live service feed or verified performance report.</p>
+                  </div>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                  <MetricCard label="Reports recorded" value={total} detail="All records in this browser demo" icon={MessageSquareText} tone="emerald" />
+                  <MetricCard label="Open issues" value={open} detail="Not yet marked resolved" icon={Clock3} tone="amber" />
+                  <MetricCard label="Resolved" value={resolved} detail="Marked complete in the demo" icon={CheckCircle2} tone="slate" />
+                  <MetricCard label="Resolution share" value={resolutionRate + '%'} detail="Resolved divided by all recorded reports" icon={TrendingUp} tone="emerald" />
+                </div>
+                <div className="mt-6 grid gap-6 xl:grid-cols-2">
+                  <div className="panel p-5">
+                    <div className="eyebrow">Service demand</div>
+                    <h3 className="mt-1 font-display text-lg font-extrabold text-slate-900 dark:text-white">Reports by issue type</h3>
+                    <div className="mt-4 h-64">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={categoryData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                          <XAxis dataKey="category" tick={{ fontSize: 11 }} />
+                          <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                          <Tooltip />
+                          <Bar dataKey="reports" name="Reports" fill="#059669" radius={[6, 6, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                  <div className="panel p-5">
+                    <div className="eyebrow">Response progress</div>
+                    <h3 className="mt-1 font-display text-lg font-extrabold text-slate-900 dark:text-white">Current report statuses</h3>
+                    <div className="mt-4 h-64">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie data={statusData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={58} outerRadius={92} paddingAngle={3}>
+                            {statusData.map((entry, index) => <Cell key={entry.name} fill={palette[index % palette.length]} />)}
+                          </Pie>
+                          <Tooltip />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="flex flex-wrap justify-center gap-x-4 gap-y-2">
+                      {statusData.map((entry, index) => <span key={entry.name} className="inline-flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400"><i className="h-2 w-2 rounded-full" style={{ background: palette[index % palette.length] }} />{entry.name} · {entry.value}</span>)}
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-6 grid gap-6 xl:grid-cols-5">
+                  <div className="panel p-5 xl:col-span-2">
+                    <div className="eyebrow">Area overview</div>
+                    <h3 className="mt-1 font-display text-lg font-extrabold text-slate-900 dark:text-white">Reports by demo zone</h3>
+                    <div className="mt-5 space-y-4">
+                      {zonesByVolume.map((zone) => <div key={zone.id}>
+                        <div className="mb-1.5 flex justify-between gap-3 text-xs"><span className="font-semibold text-slate-700 dark:text-slate-200">{zone.name}</span><span className="font-bold tabular-nums text-slate-500">{zone.count}</span></div>
+                        <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"><div className="h-full rounded-full bg-emerald-600" style={{ width: (total ? zone.count / Math.max(...zonesByVolume.map((item) => item.count), 1) * 100 : 0) + '%' }} /></div>
+                      </div>)}
+                    </div>
+                  </div>
+                  <div className="panel p-5 xl:col-span-3">
+                    <div className="eyebrow">Community updates</div>
+                    <h3 className="mt-1 font-display text-lg font-extrabold text-slate-900 dark:text-white">Recent reported issues</h3>
+                    <div className="mt-4 divide-y divide-slate-100 dark:divide-slate-800">
+                      {latest.map((report) => <button key={report.id} onClick={() => setSelectedReport(report)} className="flex w-full items-center justify-between gap-3 py-3 text-left first:pt-0 last:pb-0">
+                        <div className="min-w-0"><div className="truncate text-sm font-bold text-slate-800 dark:text-slate-100">{report.title}</div><div className="mt-1 text-xs text-slate-400">{report.zone} · {report.id}</div></div>
+                        <span className={'shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ring-1 ring-inset ' + (statusStyles[report.status] || statusStyles.Pending)}>{report.status}</span>
+                      </button>)}
+                    </div>
+                  </div>
+                </div>
+              </>
+            )
+          })()}
+
           {activeView === 'reports' && (
             <>
               <div className="mb-6 flex flex-wrap items-center gap-3">
