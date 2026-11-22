@@ -572,7 +572,7 @@ function App() {
     const columns = ['id', 'title', 'category', 'zone', 'severity', 'status', 'impact', 'cost', 'createdAt']
     const safeCell = (value) => {
       const text = String(value ?? '')
-      const protectedText = /^[=+@\\-\\t\\r]/.test(text) ? "'" + text : text
+      const protectedText = /^[=+@\- \t\r]/.test(text) ? "'" + text : text
       return '"' + protectedText.replace(/"/g, '""') + '"'
     }
     const rows = [columns, ...reports.map((report) => columns.map((key) => report[key] ?? ''))]
