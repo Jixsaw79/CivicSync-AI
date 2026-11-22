@@ -15,6 +15,39 @@ import { loadStoredReports, readThemePreference, retainRecentEvidence } from './
 
 const MapView = lazy(() => import('./MapView'))
 
+async function optimizeEvidenceImage(file) {
+  const bitmap = await createImageBitmap(file)
+  try {
+    const canvas = document.createElement('canvas')
+    const context = canvas.getContext('2d', { alpha: false })
+    if (!context) throw new Error('Image processing is unavailable in this browser.')
+
+    let blob = null
+    for (const [maxDimension, quality] of [[1280, 0.68], [960, 0.58], [800, 0.48]]) {
+      const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height))
+      canvas.width = Math.max(1, Math.round(bitmap.width * scale))
+      canvas.height = Math.max(1, Math.round(bitmap.height * scale))
+      context.fillStyle = '#ffffff'
+      context.fillRect(0, 0, canvas.width, canvas.height)
+      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+      blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality))
+      if (blob && blob.size <= 450 * 1024) break
+    }
+
+    if (!blob || blob.size > 450 * 1024) throw new Error('This image could not be reduced enough for browser storage.')
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onerror = () => reject(new Error('The optimized image could not be read.'))
+      reader.onload = () => typeof reader.result === 'string'
+        ? resolve(reader.result)
+        : reject(new Error('The optimized image could not be read.'))
+      reader.readAsDataURL(blob)
+    })
+  } finally {
+    bitmap.close?.()
+  }
+}
+
 const money = (value) => '$' + Number(value).toLocaleString('en-US')
 
 const statusStyles = {
