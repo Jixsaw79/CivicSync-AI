@@ -12,6 +12,7 @@ import {
 } from 'recharts'
 import { allocationData, initialReports, zones } from './data'
 import { loadStoredReports, readThemePreference, retainRecentEvidence } from './storage'
+import { buildReportsCsv } from './csv'
 
 const MapView = lazy(() => import('./MapView'))
 
@@ -646,14 +647,7 @@ function App() {
   }
 
   const exportReportsCsv = () => {
-    const columns = ['id', 'title', 'category', 'zone', 'severity', 'status', 'impact', 'cost', 'createdAt']
-    const safeCell = (value) => {
-      const text = String(value ?? '')
-      const protectedText = /^[=+@\- \t\r]/.test(text) ? "'" + text : text
-      return '"' + protectedText.replace(/"/g, '""') + '"'
-    }
-    const rows = [columns, ...reports.map((report) => columns.map((key) => report[key] ?? ''))]
-    const csv = rows.map((row) => row.map(safeCell).join(',')).join('\\r\\n')
+    const csv = buildReportsCsv(reports)
     const blob = new Blob(['\\uFEFF', csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
@@ -662,7 +656,7 @@ function App() {
     document.body.appendChild(link)
     link.click()
     link.remove()
-    URL.revokeObjectURL(url)
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000)
     notify('Report CSV exported')
   }
 

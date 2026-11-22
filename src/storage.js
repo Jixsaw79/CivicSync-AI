@@ -4,7 +4,7 @@ const validStatuses = new Set(['Pending', 'Assigned', 'Dispatched', 'In progress
 const validCategories = new Set(['Road damage', 'Waterlogging', 'Streetlight', 'Waste accumulation', 'Other'])
 const zoneIds = new Set(zones.map((zone) => zone.id))
 const MAX_STORED_REPORTS = 500
-const MAX_IMAGE_DATA_LENGTH = 600 * 1024
+const MAX_IMAGE_DATA_LENGTH = 620 * 1024
 const MAX_STORED_EVIDENCE_IMAGES = 5
 
 function boundedString(value, maxLength, allowEmpty = true) {

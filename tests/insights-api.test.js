@@ -96,3 +96,19 @@ test('endpoint rejects duplicate report identifiers', () => {
   insightsHandler({ method: 'POST', body: { reports: [sampleReports[0], sampleReports[0]] } }, res)
   assert.equal(res.statusCode, 400)
 })
+
+test('insights accepts up to 500 reports and rejects larger snapshots', () => {
+  const makeReports = (count) => Array.from({ length: count }, (_, index) => ({
+    ...sampleReports[0],
+    id: 'CS-BULK-' + index,
+  }))
+
+  const maximum = mockResponse()
+  insightsHandler({ method: 'POST', body: { reports: makeReports(500) } }, maximum)
+  assert.equal(maximum.statusCode, 200)
+  assert.equal(maximum.body.insights.totals.reports, 500)
+
+  const tooMany = mockResponse()
+  insightsHandler({ method: 'POST', body: { reports: makeReports(501) } }, tooMany)
+  assert.equal(tooMany.statusCode, 400)
+})
