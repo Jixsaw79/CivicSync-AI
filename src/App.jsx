@@ -814,6 +814,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-[#f5f7f6] text-slate-800 transition-colors dark:bg-[#0b1220] dark:text-slate-200">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-white focus:px-4 focus:py-3 focus:font-bold focus:text-emerald-800 focus:shadow-xl">Skip to main content</a>
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[248px] flex-col border-r border-slate-200 bg-white px-5 py-6 dark:border-slate-800 dark:bg-slate-950 lg:flex">
         <Brand />
         <div className="mt-10">
@@ -825,6 +826,7 @@ function App() {
                 <button
                   key={item.id}
                   onClick={() => setActiveView(item.id)}
+                  aria-current={activeView === item.id ? 'page' : undefined}
                   className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold transition ${
                     activeView === item.id
                       ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300'
@@ -852,7 +854,7 @@ function App() {
         </div>
       </aside>
 
-      <main className="min-h-screen lg:pl-[248px]">
+      <main id="main-content" tabIndex={-1} className="min-h-screen outline-none lg:pl-[248px]">
         <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/90">
           <div className="flex h-[72px] items-center justify-between px-4 sm:px-7 lg:px-9">
             <div className="flex items-center gap-3">
@@ -905,6 +907,7 @@ function App() {
                   <button
                     key={item.id}
                     onClick={() => setActiveView(item.id)}
+                    aria-current={activeView === item.id ? 'page' : undefined}
                     className={`flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold ${
                       activeView === item.id
                         ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300'
