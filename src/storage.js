@@ -4,7 +4,8 @@ const validStatuses = new Set(['Pending', 'Assigned', 'Dispatched', 'In progress
 const validCategories = new Set(['Road damage', 'Waterlogging', 'Streetlight', 'Waste accumulation', 'Other'])
 const zoneIds = new Set(zones.map((zone) => zone.id))
 const MAX_STORED_REPORTS = 500
-const MAX_IMAGE_DATA_LENGTH = 7 * 1024 * 1024
+const MAX_IMAGE_DATA_LENGTH = 600 * 1024
+const MAX_STORED_EVIDENCE_IMAGES = 5
 
 function boundedString(value, maxLength, allowEmpty = true) {
   return typeof value === 'string' && value.length <= maxLength && (allowEmpty || value.trim().length > 0)
@@ -75,7 +76,7 @@ export function loadStoredReports(storage, defaults) {
 
     const validReports = parsed.slice(-MAX_STORED_REPORTS).filter(isValidStoredReport)
     const merged = new Map([...defaults, ...validReports].map((report) => [report.id, report]))
-    return Array.from(merged.values()).slice(-MAX_STORED_REPORTS)
+    return retainRecentEvidence(Array.from(merged.values()).slice(-MAX_STORED_REPORTS))
   } catch {
     return defaults
   }
@@ -90,4 +91,13 @@ export function readThemePreference(storage, prefersDark = false) {
     // Fall back to the operating-system preference.
   }
   return Boolean(prefersDark)
+}
+
+export function retainRecentEvidence(reports, maxImages = MAX_STORED_EVIDENCE_IMAGES) {
+  let retained = 0
+  return reports.map((report) => {
+    if (!report.imageData) return report
+    retained += 1
+    return retained <= maxImages ? report : { ...report, imageData: null }
+  })
 }

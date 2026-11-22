@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import {
-  Activity, AlertTriangle, ArrowDownRight, ArrowUpRight, Bell, Building2, ClipboardList,
-  Check, CheckCircle2, Clock3, CloudUpload, Download, FileImage, Filter,
+  Activity, AlertTriangle, ArrowDownRight, ArrowUpRight, Building2, ClipboardList,
+  Check, CheckCircle2, Clock3, CloudUpload, Download, Filter,
   Gauge, Layers3, Leaf, MapPin, Menu, MessageSquareText, Moon, Navigation,
   Plus, Radio, RotateCcw, Search, ShieldCheck, Sparkles, Sun, TrendingUp, Users, Wallet,
   X, Zap, Image as ImageIcon,
@@ -11,9 +11,42 @@ import {
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts'
 import { allocationData, initialReports, zones } from './data'
-import { loadStoredReports, readThemePreference } from './storage'
+import { loadStoredReports, readThemePreference, retainRecentEvidence } from './storage'
 
 const MapView = lazy(() => import('./MapView'))
+
+async function optimizeEvidenceImage(file) {
+  const bitmap = await createImageBitmap(file)
+  try {
+    const canvas = document.createElement('canvas')
+    const context = canvas.getContext('2d', { alpha: false })
+    if (!context) throw new Error('Image processing is unavailable in this browser.')
+
+    let blob = null
+    for (const [maxDimension, quality] of [[1280, 0.68], [960, 0.58], [800, 0.48]]) {
+      const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height))
+      canvas.width = Math.max(1, Math.round(bitmap.width * scale))
+      canvas.height = Math.max(1, Math.round(bitmap.height * scale))
+      context.fillStyle = '#ffffff'
+      context.fillRect(0, 0, canvas.width, canvas.height)
+      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+      blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality))
+      if (blob && blob.size <= 450 * 1024) break
+    }
+
+    if (!blob || blob.size > 450 * 1024) throw new Error('This image could not be reduced enough for browser storage.')
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onerror = () => reject(new Error('The optimized image could not be read.'))
+      reader.onload = () => typeof reader.result === 'string'
+        ? resolve(reader.result)
+        : reject(new Error('The optimized image could not be read.'))
+      reader.readAsDataURL(blob)
+    })
+  } finally {
+    bitmap.close?.()
+  }
+}
 
 const money = (value) => '$' + Number(value).toLocaleString('en-US')
 
@@ -436,6 +469,7 @@ function App() {
   const [locationNote, setLocationNote] = useState('')
   const [formError, setFormError] = useState('')
   const [imageName, setImageName] = useState('')
+  const [imageProcessing, setImageProcessing] = useState(false)
   const [fileData, setFileData] = useState('')
   const [imageDataUrl, setImageDataUrl] = useState('')
   const [toast, setToast] = useState('')
@@ -454,6 +488,7 @@ function App() {
   const [insightsError, setInsightsError] = useState('')
 
   const fileRef = useRef(null)
+  const imageProcessRef = useRef(0)
   const toastTimer = useRef(null)
 
   useEffect(() => {
@@ -561,9 +596,6 @@ function App() {
     [activeReports, selectedZone, statusFilter, categoryFilter, severityFilter, search]
   )
 
-  const highZones = zones.filter((z) => z.density >= 80).length
-  const totalSaved = 48600 + reports.filter((r) => !initialReports.some((i) => i.id === r.id)).length * 1250
-
   const notify = useCallback((message) => {
     setToast(message)
     if (toastTimer.current) window.clearTimeout(toastTimer.current)
@@ -634,42 +666,53 @@ function App() {
     notify('Report CSV exported')
   }
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const f = e.target.files?.[0]
     if (!f) return
     if (!['image/png', 'image/jpeg', 'image/webp'].includes(f.type)) {
+      clearImage()
       notify('Choose a PNG, JPG or WEBP image')
-      e.target.value = ''
       return
     }
     if (f.size > 5 * 1024 * 1024) {
+      clearImage()
       notify('Image must be 5 MB or smaller')
-      e.target.value = ''
       return
     }
-    if (fileData) URL.revokeObjectURL(fileData)
 
+    const requestId = ++imageProcessRef.current
+    if (fileData) URL.revokeObjectURL(fileData)
     setImageName(f.name)
     setFileData(URL.createObjectURL(f))
+    setImageDataUrl('')
+    setImageProcessing(true)
 
-    const reader = new FileReader()
-    reader.onload = () => {
-      setImageDataUrl(typeof reader.result === 'string' ? reader.result : '')
+    try {
+      const optimized = await optimizeEvidenceImage(f)
+      if (requestId === imageProcessRef.current) setImageDataUrl(optimized)
+    } catch (error) {
+      if (requestId === imageProcessRef.current) {
+        clearImage()
+        notify(error.message || 'The selected image could not be processed.')
+      }
+    } finally {
+      if (requestId === imageProcessRef.current) setImageProcessing(false)
     }
-    reader.readAsDataURL(f)
   }
 
   const clearImage = () => {
+    imageProcessRef.current += 1
     if (fileData) URL.revokeObjectURL(fileData)
     setFileData('')
     setImageDataUrl('')
     setImageName('')
+    setImageProcessing(false)
     if (fileRef.current) fileRef.current.value = ''
   }
 
   const analyze = async (event) => {
     event.preventDefault()
-    if (processing) return
+    if (processing || imageProcessing) return
     if (note.trim().length < 8) {
       const message = 'Please describe the issue in at least 8 characters.'
       setFormError(message)
@@ -730,7 +773,7 @@ function App() {
         triageProvider: payload.provider || 'Gemini',
         municipalAdapter: municipal.adapter,
       }
-      setReports((prev) => [newReport, ...prev])
+      setReports((prev) => retainRecentEvidence([newReport, ...prev]))
       setResult(newReport)
       clearImage()
       setNote('')
@@ -744,9 +787,15 @@ function App() {
     }
   }
 
+  const changeDemoRole = (nextRole) => {
+    setDemoRole(nextRole)
+    if ((nextRole !== 'admin' && (activeView === 'optimizer' || activeView === 'intelligence')) || (nextRole !== 'citizen' && activeView === 'my-reports')) setActiveView('overview')
+  }
+
   const nav = [
     { id: 'overview', label: 'Overview', icon: Layers3 },
     { id: 'reports', label: demoRole === 'staff' ? 'Work queue' : 'Issue reports', icon: MessageSquareText },
+    { id: 'public', label: 'Transparency', icon: ShieldCheck },
     ...(demoRole === 'citizen' ? [{ id: 'my-reports', label: 'My reports', icon: ClipboardList }] : []),
     ...(demoRole === 'admin' ? [
       { id: 'intelligence', label: 'City intelligence', icon: TrendingUp },
@@ -763,7 +812,7 @@ function App() {
         <Brand />
         <div className="mt-10">
           <div className="eyebrow mb-3 px-3">Workspace</div>
-          <nav className="space-y-1">
+          <nav aria-label="Primary navigation" className="space-y-1">
             {nav.map((item) => {
               const Icon = item.icon
               return (
@@ -792,7 +841,7 @@ function App() {
           <div className="mt-3 font-display text-sm font-bold">DNCC civic services demo</div>
           <p className="mt-1 text-xs leading-5 text-slate-300">Illustrative city data. No live municipal connection.</p>
           <div className="mt-4 flex items-center gap-2 text-[10px] text-slate-400">
-            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse-soft" /> Prototype services available
+            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse-soft" /> Demo workflows ready
           </div>
         </div>
       </aside>
@@ -823,14 +872,10 @@ function App() {
               <span className="hidden items-center gap-2 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800 sm:inline-flex dark:bg-amber-950/50 dark:text-amber-300">
                 <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> DNCC simulation
               </span>
-              <button className="relative rounded-xl p-2.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">
-                <Bell size={19} />
-                <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-amber-500 ring-2 ring-white dark:ring-slate-950" />
-              </button>
               <div className="hidden h-8 w-px bg-slate-200 dark:bg-slate-700 sm:block" />
               <label className="hidden items-center gap-2 sm:flex">
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Demo role</span>
-                <select value={demoRole} onChange={(event) => { setDemoRole(event.target.value); if ((event.target.value !== "admin" && (activeView === "optimizer" || activeView === "intelligence")) || (event.target.value !== "citizen" && activeView === "my-reports")) setActiveView("overview") }} className="field w-auto py-2 text-xs" aria-label="Switch simulated demo role">
+                <select value={demoRole} onChange={(event) => changeDemoRole(event.target.value)} className="field w-auto py-2 text-xs" aria-label="Switch simulated demo role">
                   <option value="citizen">Citizen</option>
                   <option value="staff">Department staff</option>
                   <option value="admin">Administrator</option>
@@ -838,24 +883,34 @@ function App() {
               </label>
             </div>
           </div>
-          <div className="flex gap-1 overflow-x-auto border-t border-slate-100 px-4 py-2 dark:border-slate-800 lg:hidden">
-            {nav.map((item) => {
-              const Icon = item.icon
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveView(item.id)}
-                  className={`flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold ${
-                    activeView === item.id
-                      ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300'
-                      : 'text-slate-500 dark:text-slate-400'
-                  }`}
-                >
-                  <Icon size={15} />
-                  {item.label}
-                </button>
-              )
-            })}
+          <div className="flex items-center gap-2 border-t border-slate-100 px-4 py-2 dark:border-slate-800 lg:hidden">
+            <label className="shrink-0">
+              <span className="sr-only">Switch simulated demo role</span>
+              <select value={demoRole} onChange={(event) => changeDemoRole(event.target.value)} className="field w-auto max-w-[132px] py-2 text-xs" aria-label="Switch simulated demo role">
+                <option value="citizen">Citizen</option>
+                <option value="staff">Department staff</option>
+                <option value="admin">Administrator</option>
+              </select>
+            </label>
+            <nav aria-label="Primary navigation" className="flex min-w-0 gap-1 overflow-x-auto">
+              {nav.map((item) => {
+                const Icon = item.icon
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveView(item.id)}
+                    className={`flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold ${
+                      activeView === item.id
+                        ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300'
+                        : 'text-slate-500 dark:text-slate-400'
+                    }`}
+                  >
+                    <Icon size={15} />
+                    {item.label}
+                  </button>
+                )
+              })}
+            </nav>
           </div>
         </header>
 
@@ -896,8 +951,8 @@ function App() {
                   <ZoneMap selected={selectedZone} onSelect={setSelectedZone} reports={reports} onReportSelect={setSelectedReport} />
                 </div>
                 <div className="panel p-5 lg:col-span-2">
-                  <div className="eyebrow">Live triage stream</div>
-                  <div className="mt-1 text-sm font-bold text-slate-800 dark:text-slate-100">Recent AI assignments</div>
+                  <div className="eyebrow">Priority overview</div>
+                  <div className="mt-1 text-sm font-bold text-slate-800 dark:text-slate-100">Highest-priority open reports</div>
                   <div className="mt-4 space-y-3">
                     {[...activeReports]
                       .sort((a, b) => b.severity - a.severity)
@@ -1108,6 +1163,7 @@ function App() {
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Search reports, zones, units..."
+                    aria-label="Search reports, zones and units"
                     className="field pl-10"
                   />
                   {search && (
@@ -1209,11 +1265,12 @@ function App() {
                       <label htmlFor="report-image" className="flex min-h-[116px] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 p-3 text-center transition hover:border-emerald-400 hover:bg-emerald-50/40 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:border-emerald-600 dark:hover:bg-emerald-950/20">
                         {fileData ? <img src={fileData} alt="Preview of selected issue evidence" className="max-h-40 w-full rounded-xl object-cover" /> : <><CloudUpload size={25} className="text-slate-400" /><span className="mt-2 text-sm font-bold text-slate-700 dark:text-slate-200">Add a photo of the issue</span><span className="mt-1 text-xs text-slate-400">PNG, JPG or WEBP · up to 5 MB</span></>}
                       </label>
-                      <p className="mt-1.5 text-[10px] text-slate-400">The image stays in this browser’s local demo storage.</p>
+                      {imageProcessing ? <p className="mt-1.5 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400" role="status">Optimizing photo for local storage…</p> : imageName && <p className="mt-1.5 truncate text-[10px] text-slate-500 dark:text-slate-400" title={imageName}>Selected: {imageName} · optimized copy</p>}
+                  <p className="mt-1.5 text-[10px] text-slate-400">The image stays in this browser’s local demo storage.</p>
                     </div>
 
-                    <button type="submit" disabled={processing} className="btn-primary min-h-12 w-full text-sm">
-                      {processing ? (
+                    <button type="submit" disabled={processing || imageProcessing} className="btn-primary min-h-12 w-full text-sm">
+                      {imageProcessing ? (<>Optimizing photo…</>) : processing ? (
                         <>
                           <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                           Running AI triage…
@@ -1242,7 +1299,7 @@ function App() {
                       <ShieldCheck size={14} className="text-emerald-700 dark:text-emerald-400" /> Privacy-first prototype
                     </div>
                     <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                      Images are previewed and optionally stored as data URLs in localStorage for this demo only. Nothing is uploaded to a server.
+                      Images are resized and compressed before local storage. The five most recent reports retain photo evidence to keep browser storage usage bounded; nothing is uploaded to a server.
                     </p>
                   </div>
                 </div>
