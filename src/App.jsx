@@ -88,7 +88,7 @@ function SectionHeading({ eyebrow, title, subtitle, action }) {
   )
 }
 
-function ZoneMap({ selected, onSelect, reports }) {
+function ZoneMap({ selected, onSelect, reports, onReportSelect }) {
   return (
     <div className="panel p-5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -102,7 +102,7 @@ function ZoneMap({ selected, onSelect, reports }) {
           <span className="flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-full bg-rose-500" />High</span>
         </div>
       </div>
-      <MapView zones={zones} reports={reports} selected={selected} onSelect={(id) => onSelect(selected === id ? null : id)} />
+      <MapView zones={zones} reports={reports} selected={selected} onSelect={(id) => onSelect(selected === id ? null : id)} onReportSelect={onReportSelect} />
       {selected && (
         <div className="mt-3 flex items-center justify-between rounded-xl bg-emerald-50 px-3 py-2.5 text-sm dark:bg-emerald-950/40">
           <span className="font-semibold text-emerald-900 dark:text-emerald-200">
@@ -730,7 +730,7 @@ function App() {
 
               <div className="mt-6 grid gap-6 lg:grid-cols-5">
                 <div className="lg:col-span-3">
-                  <ZoneMap selected={selectedZone} onSelect={setSelectedZone} reports={reports} />
+                  <ZoneMap selected={selectedZone} onSelect={setSelectedZone} reports={reports} onReportSelect={setSelectedReport} />
                 </div>
                 <div className="panel p-5 lg:col-span-2">
                   <div className="eyebrow">Live triage stream</div>
