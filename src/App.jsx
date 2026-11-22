@@ -410,7 +410,7 @@ function ConfirmDialog({ open, title, message, confirmLabel, onConfirm, onCancel
 function App() {
   const [reports, setReports] = useState(() => {
     try {
-      const saved = window.localStorage.getItem('civicsync-reports-v2') || window.localStorage.getItem('civicsync-reports-v2')
+      const saved = window.localStorage.getItem('civicsync-reports-v2')
       if (!saved) return initialReports
       const parsed = JSON.parse(saved)
       return Array.isArray(parsed) &&
