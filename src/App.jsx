@@ -151,6 +151,20 @@ function ZoneMap({ selected, onSelect, reports, onReportSelect }) {
 }
 
 function ReportTable({ reports, onDispatch, onStart, onResolve, onSelect, canManage = true }) {
+  const renderAction = (report) => {
+    if (!canManage) return <span className="text-xs font-medium text-slate-400">Staff access only</span>
+    if (report.status === 'Pending' || report.status === 'Assigned') {
+      return <button onClick={() => onDispatch(report.id)} className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500">Dispatch crew</button>
+    }
+    if (report.status === 'Dispatched') {
+      return <button onClick={() => onStart(report.id)} className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-xs font-bold text-sky-800 transition hover:bg-sky-50 dark:border-sky-800 dark:bg-slate-800 dark:text-sky-300 dark:hover:bg-sky-950/40">Start work</button>
+    }
+    if (report.status === 'In progress') {
+      return <button onClick={() => onResolve(report.id)} className="rounded-lg border border-emerald-200 bg-white px-3 py-2 text-xs font-bold text-emerald-800 transition hover:bg-emerald-50 dark:border-emerald-700 dark:bg-slate-800 dark:text-emerald-300 dark:hover:bg-emerald-950/40">Resolve</button>
+    }
+    return <span className="text-xs font-medium text-slate-400">Completed</span>
+  }
+
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-soft dark:border-slate-700 dark:bg-slate-900/80">
       <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-slate-800">
@@ -162,7 +176,46 @@ function ReportTable({ reports, onDispatch, onStart, onResolve, onSelect, canMan
           {reports.length} tickets
         </span>
       </div>
-      <div className="overflow-x-auto">
+
+      <div className="divide-y divide-slate-100 dark:divide-slate-800 md:hidden">
+        {reports.map((report) => (
+          <article key={report.id} className="p-4">
+            <div className="flex items-start justify-between gap-3">
+              <button onClick={() => onSelect(report)} className="min-w-0 text-left">
+                <div className="font-bold text-slate-800 dark:text-slate-100">{report.title}</div>
+                <div className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-slate-400">
+                  <span>{report.zone} · {report.id}</span>
+                  {report.imageData && <span className="inline-flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400"><ImageIcon size={11} /> Photo</span>}
+                </div>
+              </button>
+              <span className={`shrink-0 rounded-lg px-2 py-1 text-xs font-extrabold ${severityTone(report.severity)}`}>{report.severity}/100</span>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-3 dark:bg-slate-800/70">
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">People impacted</div>
+                <div className="mt-1 text-sm font-bold tabular-nums text-slate-700 dark:text-slate-200">{report.impact.toLocaleString()}</div>
+              </div>
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Estimated cost</div>
+                <div className="mt-1 text-sm font-bold tabular-nums text-slate-700 dark:text-slate-200">{money(report.cost)}</div>
+              </div>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+              <span className={`whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 ring-inset ${statusStyles[report.status] || statusStyles.Pending}`}>{report.status}</span>
+              {renderAction(report)}
+            </div>
+          </article>
+        ))}
+        {reports.length === 0 && (
+          <div className="flex flex-col items-center gap-2 px-5 py-12 text-center text-sm text-slate-400">
+            <CheckCircle2 size={28} className="text-slate-300 dark:text-slate-600" />
+            <p>No reports match the current filters.</p>
+            <p className="text-xs">Try clearing the zone filter or search query.</p>
+          </div>
+        )}
+      </div>
+
+      <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-[760px] text-left text-sm">
           <thead className="bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:bg-slate-800/80 dark:text-slate-500">
             <tr>
@@ -175,75 +228,32 @@ function ReportTable({ reports, onDispatch, onStart, onResolve, onSelect, canMan
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-            {reports.map((r) => (
-              <tr key={r.id} className="transition hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
+            {reports.map((report) => (
+              <tr key={report.id} className="transition hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
                 <td className="px-5 py-4">
-                  <button onClick={() => onSelect(r)} className="text-left">
-                    <div className="font-bold text-slate-800 hover:text-emerald-800 dark:text-slate-100 dark:hover:text-emerald-300">
-                      {r.title}
-                    </div>
+                  <button onClick={() => onSelect(report)} className="text-left">
+                    <div className="font-bold text-slate-800 hover:text-emerald-800 dark:text-slate-100 dark:hover:text-emerald-300">{report.title}</div>
                     <div className="mt-1 text-xs text-slate-400">
-                      {r.zone} · {r.id}
-                      {r.imageData && (
-                        <span className="ml-2 inline-flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400">
-                          <ImageIcon size={11} /> photo
-                        </span>
-                      )}
+                      {report.zone} · {report.id}
+                      {report.imageData && <span className="ml-2 inline-flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400"><ImageIcon size={11} /> photo</span>}
                     </div>
                   </button>
                 </td>
-                <td className="px-4 py-4">
-                  <span className={`rounded-lg px-2 py-1 text-xs font-extrabold ${severityTone(r.severity)}`}>
-                    {r.severity}/100
-                  </span>
-                </td>
-                <td className="px-4 py-4 font-semibold text-slate-600 dark:text-slate-300">{r.impact.toLocaleString()}</td>
-                <td className="px-4 py-4 font-semibold text-slate-600 dark:text-slate-300">{money(r.cost)}</td>
-                <td className="px-4 py-4">
-                  <span className={`whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 ring-inset ${statusStyles[r.status] || statusStyles.Pending}`}>
-                    {r.status}
-                  </span>
-                </td>
-                <td className="px-5 py-4 text-right">
-                  {!canManage ? (
-                    <span className="text-xs font-medium text-slate-400">Staff access only</span>
-                  ) : r.status === 'Pending' || r.status === 'Assigned' ? (
-                    <button
-                      onClick={() => onDispatch(r.id)}
-                      className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500"
-                    >
-                      Dispatch crew
-                    </button>
-                  ) : r.status === 'Dispatched' ? (
-                    <button
-                      onClick={() => onStart(r.id)}
-                      className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-xs font-bold text-sky-800 transition hover:bg-sky-50 dark:border-sky-800 dark:bg-slate-800 dark:text-sky-300 dark:hover:bg-sky-950/40"
-                    >
-                      Start work
-                    </button>
-                  ) : r.status === 'In progress' ? (
-                    <button
-                      onClick={() => onResolve(r.id)}
-                      className="rounded-lg border border-emerald-200 bg-white px-3 py-2 text-xs font-bold text-emerald-800 transition hover:bg-emerald-50 dark:border-emerald-700 dark:bg-slate-800 dark:text-emerald-300 dark:hover:bg-emerald-950/40"
-                    >
-                      Resolve
-                    </button>
-                  ) : (
-                    <span className="text-xs font-medium text-slate-400">Completed</span>
-                  )}
-                </td>
+                <td className="px-4 py-4"><span className={`rounded-lg px-2 py-1 text-xs font-extrabold ${severityTone(report.severity)}`}>{report.severity}/100</span></td>
+                <td className="px-4 py-4 font-semibold text-slate-600 dark:text-slate-300">{report.impact.toLocaleString()}</td>
+                <td className="px-4 py-4 font-semibold text-slate-600 dark:text-slate-300">{money(report.cost)}</td>
+                <td className="px-4 py-4"><span className={`whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 ring-inset ${statusStyles[report.status] || statusStyles.Pending}`}>{report.status}</span></td>
+                <td className="px-5 py-4 text-right">{renderAction(report)}</td>
               </tr>
             ))}
             {reports.length === 0 && (
-              <tr>
-                <td colSpan="6" className="px-5 py-12 text-center text-sm text-slate-400">
-                  <div className="flex flex-col items-center gap-2">
-                    <CheckCircle2 size={28} className="text-slate-300 dark:text-slate-600" />
-                    <p>No reports match the current filters.</p>
-                    <p className="text-xs">Try clearing the zone filter or search query.</p>
-                  </div>
-                </td>
-              </tr>
+              <tr><td colSpan="6" className="px-5 py-12 text-center text-sm text-slate-400">
+                <div className="flex flex-col items-center gap-2">
+                  <CheckCircle2 size={28} className="text-slate-300 dark:text-slate-600" />
+                  <p>No reports match the current filters.</p>
+                  <p className="text-xs">Try clearing the zone filter or search query.</p>
+                </div>
+              </td></tr>
             )}
           </tbody>
         </table>
@@ -262,6 +272,7 @@ function useDialogAccessibility(open, onClose) {
     const previousFocus = document.activeElement
     const focusableSelector = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
     const getFocusable = () => Array.from(dialogRef.current?.querySelectorAll(focusableSelector) || [])
+      .filter((element) => element.getClientRects().length > 0 && getComputedStyle(element).visibility !== 'hidden')
     const firstFocusable = getFocusable()[0]
     ;(firstFocusable || dialogRef.current)?.focus()
 
@@ -280,10 +291,14 @@ function useDialogAccessibility(open, onClose) {
       }
       const first = items[0]
       const last = items[items.length - 1]
-      if (event.shiftKey && document.activeElement === first) {
+      const active = document.activeElement
+      if (!dialogRef.current?.contains(active)) {
+        event.preventDefault()
+        ;(event.shiftKey ? last : first).focus()
+      } else if (event.shiftKey && (active === first || active === dialogRef.current)) {
         event.preventDefault()
         last.focus()
-      } else if (!event.shiftKey && document.activeElement === last) {
+      } else if (!event.shiftKey && active === last) {
         event.preventDefault()
         first.focus()
       }
