@@ -115,7 +115,7 @@ function ZoneMap({ selected, onSelect, reports }) {
   )
 }
 
-function ReportTable({ reports, onDispatch, onResolve, onSelect, canManage = true }) {
+function ReportTable({ reports, onDispatch, onStart, onResolve, onSelect, canManage = true }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-soft dark:border-slate-700 dark:bg-slate-900/80">
       <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-slate-800">
@@ -179,7 +179,14 @@ function ReportTable({ reports, onDispatch, onResolve, onSelect, canManage = tru
                     >
                       Dispatch crew
                     </button>
-                  ) : r.status === 'Dispatched' || r.status === 'In progress' ? (
+                  ) : r.status === 'Dispatched' ? (
+                    <button
+                      onClick={() => onStart(r.id)}
+                      className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-xs font-bold text-sky-800 transition hover:bg-sky-50 dark:border-sky-800 dark:bg-slate-800 dark:text-sky-300 dark:hover:bg-sky-950/40"
+                    >
+                      Start work
+                    </button>
+                  ) : r.status === 'In progress' ? (
                     <button
                       onClick={() => onResolve(r.id)}
                       className="rounded-lg border border-emerald-200 bg-white px-3 py-2 text-xs font-bold text-emerald-800 transition hover:bg-emerald-50 dark:border-emerald-700 dark:bg-slate-800 dark:text-emerald-300 dark:hover:bg-emerald-950/40"
@@ -270,6 +277,22 @@ function ReportModal({ report, onClose }) {
           ))}
         </div>
 
+        <div className="mt-5">
+          <div className="text-xs font-bold uppercase tracking-wider text-slate-400">Response history</div>
+          <div className="mt-3 space-y-3">
+            {(report.history?.length ? report.history : [{ status: 'Submitted', note: 'Seeded demonstration report.', at: null }, ...(report.status !== 'Pending' && report.status !== 'Assigned' ? [{ status: report.status, note: 'Current demonstration status.', at: null }] : [])]).map((entry, index) => (
+              <div key={entry.status + index} className="flex gap-3">
+                <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-emerald-500 ring-4 ring-emerald-100 dark:ring-emerald-950" />
+                <div className="min-w-0">
+                  <div className="text-sm font-bold text-slate-800 dark:text-slate-100">{entry.status}</div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{entry.note}</p>
+                  {entry.at && <p className="mt-0.5 text-[10px] text-slate-400">{new Date(entry.at).toLocaleString()}</p>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
         <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 p-3 dark:border-emerald-900 dark:bg-emerald-950/30">
           <div className="flex items-center gap-2 text-xs font-bold text-emerald-800 dark:text-emerald-300">
             <Sparkles size={14} /> AI triage recommendation
@@ -302,7 +325,7 @@ function ConfirmDialog({ open, title, message, confirmLabel, onConfirm, onCancel
 function App() {
   const [reports, setReports] = useState(() => {
     try {
-      const saved = window.localStorage.getItem('civicsync-reports-v1')
+      const saved = window.localStorage.getItem('civicsync-reports-v2') || window.localStorage.getItem('civicsync-reports-v2')
       if (!saved) return initialReports
       const parsed = JSON.parse(saved)
       return Array.isArray(parsed) &&
@@ -315,7 +338,7 @@ function App() {
             Number.isFinite(r.severity) &&
             Number.isFinite(r.cost)
         )
-        ? parsed
+        ? Array.from(new Map([...initialReports, ...parsed].map((report) => [report.id, report])).values())
         : initialReports
     } catch {
       return initialReports
@@ -327,6 +350,8 @@ function App() {
   const [demoRole, setDemoRole] = useState('admin')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All statuses')
+  const [categoryFilter, setCategoryFilter] = useState('All categories')
+  const [severityFilter, setSeverityFilter] = useState('All priorities')
   const [selectedReport, setSelectedReport] = useState(null)
   const [processing, setProcessing] = useState(false)
   const [result, setResult] = useState(null)
@@ -361,7 +386,7 @@ function App() {
 
   useEffect(() => {
     try {
-      window.localStorage.setItem('civicsync-reports-v1', JSON.stringify(reports))
+      window.localStorage.setItem('civicsync-reports-v2', JSON.stringify(reports))
     } catch {
       /* Storage may be unavailable or full. */
     }
@@ -376,6 +401,33 @@ function App() {
   }, [fileData])
 
   const activeReports = useMemo(() => reports.filter((r) => r.status !== 'Resolved'), [reports])
+  const resolvedReports = useMemo(() => reports.filter((r) => r.status === 'Resolved'), [reports])
+  const criticalReports = useMemo(() => activeReports.filter((r) => r.severity >= 85), [activeReports])
+  const departmentSummary = useMemo(() => {
+    const totals = reports.reduce((acc, report) => {
+      const key = report.unit || 'Unassigned'
+      acc[key] = acc[key] || { department: key, total: 0, open: 0, resolved: 0 }
+      acc[key].total += 1
+      if (report.status === 'Resolved') acc[key].resolved += 1
+      else acc[key].open += 1
+      return acc
+    }, {})
+    return Object.values(totals).sort((a, b) => b.total - a.total)
+  }, [reports])
+  const categorySummary = useMemo(() => {
+    const totals = reports.reduce((acc, report) => {
+      acc[report.category] = (acc[report.category] || 0) + 1
+      return acc
+    }, {})
+    return Object.entries(totals).map(([name, value]) => ({ name, value }))
+  }, [reports])
+  const statusSummary = useMemo(() => [
+    { name: 'Pending', value: reports.filter((r) => r.status === 'Pending').length },
+    { name: 'Assigned', value: reports.filter((r) => r.status === 'Assigned').length },
+    { name: 'Dispatched', value: reports.filter((r) => r.status === 'Dispatched').length },
+    { name: 'In progress', value: reports.filter((r) => r.status === 'In progress').length },
+    { name: 'Resolved', value: resolvedReports.length },
+  ], [reports, resolvedReports])
   const filteredReports = useMemo(
     () =>
       activeReports
@@ -383,12 +435,17 @@ function App() {
           (r) =>
             (!selectedZone || r.zoneId === selectedZone) &&
             (statusFilter === 'All statuses' || r.status === statusFilter) &&
+            (categoryFilter === 'All categories' || r.category === categoryFilter) &&
+            (severityFilter === 'All priorities' ||
+              (severityFilter === 'Critical' && r.severity >= 85) ||
+              (severityFilter === 'High' && r.severity >= 65 && r.severity < 85) ||
+              (severityFilter === 'Standard' && r.severity < 65)) &&
             (r.title + r.zone + r.category + r.id + r.description + r.unit)
               .toLowerCase()
               .includes(search.trim().toLowerCase())
         )
         .sort((a, b) => b.severity - a.severity),
-    [activeReports, selectedZone, statusFilter, search]
+    [activeReports, selectedZone, statusFilter, categoryFilter, severityFilter, search]
   )
 
   const highZones = zones.filter((z) => z.density >= 80).length
@@ -402,9 +459,16 @@ function App() {
 
   const dispatch = (id) => {
     setReports((prev) =>
-      prev.map((r) => (r.id === id && (r.status === 'Pending' || r.status === 'Assigned') ? { ...r, status: 'Dispatched' } : r))
+      prev.map((r) => (r.id === id && (r.status === 'Pending' || r.status === 'Assigned') ? { ...r, status: 'Dispatched', history: [...(r.history || []), { status: 'Dispatched', note: 'A municipal response crew was assigned in the demo workflow.', at: new Date().toISOString() }] } : r))
     )
     notify(`Crew dispatched for ${id}`)
+  }
+
+  const startWork = (id) => {
+    setReports((prev) =>
+      prev.map((r) => (r.id === id && r.status === 'Dispatched' ? { ...r, status: 'In progress', history: [...(r.history || []), { status: 'In progress', note: 'Department staff started the assigned work.', at: new Date().toISOString() }] } : r))
+    )
+    notify(`Work started for ${id}`)
   }
 
   const resolve = (id) => {
@@ -416,7 +480,7 @@ function App() {
     setReports((prev) =>
       prev.map((r) =>
         r.id === confirmResolve && (r.status === 'Dispatched' || r.status === 'In progress')
-          ? { ...r, status: 'Resolved' }
+          ? { ...r, status: 'Resolved', resolvedAt: new Date().toISOString(), resolutionNote: 'Marked resolved in the CivicSync demonstration workflow.', history: [...(r.history || []), { status: 'Resolved', note: 'Work marked complete by department staff.', at: new Date().toISOString() }] }
           : r
       )
     )
@@ -493,6 +557,7 @@ function App() {
         longitude: zone.longitude,
         severity: triage.severity,
         status: 'Pending',
+        history: [{ status: 'Submitted', note: 'Citizen report received and queued for AI triage.', at: new Date().toISOString() }],
         unit: routedDepartment,
         impact: Math.round(zone.population * (triage.severity / 100) * 0.12),
         cost: { 'Road damage': 8600, Waterlogging: 6900, Streetlight: 2400, 'Waste accumulation': 1700 }[triage.category] ?? 2500,
@@ -521,8 +586,11 @@ function App() {
 
   const nav = [
     { id: 'overview', label: 'Overview', icon: Layers3 },
-    { id: 'reports', label: 'Issue reports', icon: MessageSquareText },
-    ...(demoRole === 'admin' ? [{ id: 'optimizer', label: 'Resource optimizer', icon: Wallet }] : []),
+    { id: 'reports', label: demoRole === 'staff' ? 'Work queue' : 'Issue reports', icon: MessageSquareText },
+    ...(demoRole === 'admin' ? [
+      { id: 'intelligence', label: 'City intelligence', icon: TrendingUp },
+      { id: 'optimizer', label: 'Resource optimizer', icon: Wallet },
+    ] : []),
   ]
 
   const allocationTotal = allocationData.reduce((sum, d) => sum + d.optimized, 0)
@@ -601,7 +669,7 @@ function App() {
               <div className="hidden h-8 w-px bg-slate-200 dark:bg-slate-700 sm:block" />
               <label className="hidden items-center gap-2 sm:flex">
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Demo role</span>
-                <select value={demoRole} onChange={(event) => { setDemoRole(event.target.value); if (event.target.value !== "admin" && activeView === "optimizer") setActiveView("overview") }} className="field w-auto py-2 text-xs" aria-label="Switch simulated demo role">
+                <select value={demoRole} onChange={(event) => { setDemoRole(event.target.value); if (event.target.value !== "admin" && (activeView === "optimizer" || activeView === "intelligence")) setActiveView("overview") }} className="field w-auto py-2 text-xs" aria-label="Switch simulated demo role">
                   <option value="citizen">Citizen</option>
                   <option value="staff">Department staff</option>
                   <option value="admin">Administrator</option>
@@ -637,13 +705,15 @@ function App() {
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" /> Dhaka North · Civic issue intelligence
               </div>
               <h1 className="mt-2 font-display text-2xl font-extrabold tracking-tight text-slate-950 sm:text-3xl dark:text-white">
-                {activeView === 'overview' ? 'Executive overview' : activeView === 'reports' ? 'Citizen issue reports' : 'Budget & resource optimizer'}
+                {activeView === 'overview' ? 'Executive overview' : activeView === 'reports' ? (demoRole === 'staff' ? 'Department work queue' : 'Citizen issue reports') : activeView === 'intelligence' ? 'City intelligence' : 'Budget & resource optimizer'}
               </h1>
               <p className="mt-1.5 max-w-2xl text-sm text-slate-500 dark:text-slate-400">
                 {activeView === 'overview'
                   ? 'A unified view of urban infrastructure health, service demand and response priorities.'
                   : activeView === 'reports'
-                  ? 'Review citizen-submitted reports, inspect AI triage and dispatch municipal crews.'
+                  ? (demoRole === 'staff' ? 'Review assigned civic issues and move work through the department response workflow.' : 'Explore community reports, inspect AI triage and submit a new civic issue.')
+                  : activeView === 'intelligence'
+                  ? 'Explore issue patterns and department workload using the prototype’s synthetic demonstration dataset.'
                   : 'Compare allocation strategies and direct maintenance resources where they create the highest impact.'}
               </p>
             </div>
@@ -652,10 +722,10 @@ function App() {
           {activeView === 'overview' && (
             <>
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <MetricCard label="Active reports" value={activeReports.length} detail="Open tickets across all zones" icon={Activity} trend="12% vs last week" trendUp={false} tone="emerald" />
-                <MetricCard label="High-severity zones" value={highZones} detail="Density ≥ 80%" icon={AlertTriangle} tone="rose" />
-                <MetricCard label="Est. budget impact" value={money(totalSaved)} detail="Optimized allocation savings (demo)" icon={Wallet} trend="+$12.4k" trendUp={true} tone="amber" />
-                <MetricCard label="Avg. dispatch time" value="2.4h" detail="From triage to crew assignment" icon={Clock3} trend="18% faster" trendUp={true} tone="slate" />
+                <MetricCard label="Total reports" value={reports.length} detail="All demonstration complaints" icon={Activity} tone="emerald" />
+                <MetricCard label="Open reports" value={activeReports.length} detail="Awaiting or receiving action" icon={Clock3} tone="amber" />
+                <MetricCard label="Critical open" value={criticalReports.length} detail="Severity score of 85 or higher" icon={AlertTriangle} tone="rose" />
+                <MetricCard label="Resolved reports" value={resolvedReports.length} detail="Completed in this demo dataset" icon={CheckCircle2} tone="slate" />
               </div>
 
               <div className="mt-6 grid gap-6 lg:grid-cols-5">
@@ -692,7 +762,7 @@ function App() {
 
               <div className="mt-6">
                 <SectionHeading eyebrow="Operations" title="Priority maintenance queue" subtitle="Highest urgency items first." />
-                <ReportTable reports={filteredReports.slice(0, 6)} onDispatch={dispatch} onResolve={resolve} onSelect={setSelectedReport} canManage={demoRole !== 'citizen'} />
+                <ReportTable reports={filteredReports.slice(0, 6)} onDispatch={dispatch} onStart={startWork} onResolve={resolve} onSelect={setSelectedReport} canManage={demoRole !== 'citizen'} />
               </div>
             </>
           )}
@@ -724,11 +794,24 @@ function App() {
                   <option>Dispatched</option>
                   <option>In progress</option>
                 </select>
+                <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="field w-auto min-w-[155px]">
+                  <option>All categories</option>
+                  <option>Road damage</option>
+                  <option>Waterlogging</option>
+                  <option>Streetlight</option>
+                  <option>Waste accumulation</option>
+                </select>
+                <select value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value)} className="field w-auto min-w-[145px]">
+                  <option>All priorities</option>
+                  <option>Critical</option>
+                  <option>High</option>
+                  <option>Standard</option>
+                </select>
               </div>
 
               <div className="grid gap-6 xl:grid-cols-5">
                 <div className="xl:col-span-3">
-                  <ReportTable reports={filteredReports} onDispatch={dispatch} onResolve={resolve} onSelect={setSelectedReport} canManage={demoRole !== 'citizen'} />
+                  <ReportTable reports={filteredReports} onDispatch={dispatch} onStart={startWork} onResolve={resolve} onSelect={setSelectedReport} canManage={demoRole !== 'citizen'} />
                 </div>
 
                 <div className="panel p-5 xl:col-span-2">
@@ -838,6 +921,78 @@ function App() {
             </>
           )}
 
+
+          {activeView === 'intelligence' && demoRole === 'admin' && (
+            <>
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <MetricCard label="Departments represented" value={departmentSummary.length} detail="Across the demo service model" icon={Building2} tone="emerald" />
+                <MetricCard label="Resolution rate" value={reports.length ? Math.round((resolvedReports.length / reports.length) * 100) + '%' : '0%'} detail="Resolved ÷ all seeded and submitted reports" icon={CheckCircle2} tone="slate" />
+                <MetricCard label="Critical backlog" value={criticalReports.length} detail="Open reports needing priority review" icon={AlertTriangle} tone="rose" />
+                <MetricCard label="Issue categories" value={categorySummary.length} detail="Supported civic issue types" icon={Filter} tone="amber" />
+              </div>
+              <div className="mt-6 grid gap-6 xl:grid-cols-5">
+                <div className="panel p-5 xl:col-span-3">
+                  <div className="eyebrow">Department workload</div>
+                  <h3 className="mt-1 font-display text-lg font-extrabold text-slate-900 dark:text-white">Reports by responsible unit</h3>
+                  <div className="mt-5 h-72">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={departmentSummary} layout="vertical" margin={{ top: 4, right: 18, left: 18, bottom: 4 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" className="dark:stroke-slate-700" />
+                        <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
+                        <YAxis type="category" dataKey="department" width={125} tick={{ fontSize: 10 }} />
+                        <Tooltip />
+                        <Bar dataKey="open" name="Open" stackId="reports" fill="#0d9488" radius={[0, 4, 4, 0]} />
+                        <Bar dataKey="resolved" name="Resolved" stackId="reports" fill="#94a3b8" radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+                <div className="panel p-5 xl:col-span-2">
+                  <div className="eyebrow">Service status</div>
+                  <h3 className="mt-1 font-display text-lg font-extrabold text-slate-900 dark:text-white">Complaint lifecycle</h3>
+                  <div className="mt-5 h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={statusSummary} dataKey="value" nameKey="name" innerRadius={58} outerRadius={88} paddingAngle={3}>
+                          {statusSummary.map((entry, index) => <Cell key={entry.name} fill={['#f59e0b', '#64748b', '#0ea5e9', '#8b5cf6', '#10b981'][index]} />)}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    {statusSummary.map((entry) => (
+                      <div key={entry.name} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
+                        <span className="text-slate-500 dark:text-slate-400">{entry.name}</span>
+                        <strong className="text-slate-800 dark:text-slate-100">{entry.value}</strong>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-6 grid gap-4 md:grid-cols-2">
+                {departmentSummary.map((department) => (
+                  <div key={department.department} className="panel p-5">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <div className="font-bold text-slate-900 dark:text-white">{department.department}</div>
+                        <div className="mt-1 text-xs text-slate-400">{department.total} reports in the demonstration dataset</div>
+                      </div>
+                      <span className="rounded-lg bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">{department.resolved} resolved</span>
+                    </div>
+                    <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                      <div className="h-full rounded-full bg-emerald-600" style={{ width: (department.total ? department.resolved / department.total * 100 : 0) + '%' }} />
+                    </div>
+                    <div className="mt-2 flex justify-between text-xs text-slate-500 dark:text-slate-400"><span>{department.open} open</span><span>{department.total ? Math.round(department.resolved / department.total * 100) : 0}% resolved</span></div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs leading-5 text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+                <strong>Data transparency:</strong> All figures are calculated from local demonstration records. They are not live DNCC statistics, verified service-level results or official departmental performance data.
+              </div>
+            </>
+          )}
+
           {activeView === 'optimizer' && (
             <>
               <div className="grid gap-6 lg:grid-cols-2">
@@ -906,6 +1061,7 @@ function App() {
                 <ReportTable
                   reports={[...activeReports].sort((a, b) => b.severity - a.severity)}
                   onDispatch={dispatch}
+                  onStart={startWork}
                   onResolve={resolve}
                   onSelect={setSelectedReport}
                   canManage={demoRole !== 'citizen'}
