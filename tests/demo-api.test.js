@@ -96,3 +96,57 @@ test('Gemini triage output validator rejects malformed provider output', () => {
   assert.equal(isValidTriage({ ...valid, safety_flags: ['x'.repeat(101)] }), false)
   assert.equal(isValidTriage({ ...valid, summary: 'x'.repeat(141) }), false)
 })
+
+test('Gemini triage keeps the Gemini API key out of the request URL', async (t) => {
+  const previousKey = process.env.GEMINI_API_KEY
+  const previousModel = process.env.GEMINI_MODEL
+  const previousFetch = globalThis.fetch
+  process.env.GEMINI_API_KEY = 'test-secret-key'
+  process.env.GEMINI_MODEL = 'gemini-2.5-flash'
+
+  globalThis.fetch = async (url, options) => {
+    assert.equal(String(url).includes('test-secret-key'), false)
+    assert.equal(options.headers['x-goog-api-key'], 'test-secret-key')
+    const requestBody = JSON.parse(options.body)
+    assert.equal(requestBody.generationConfig.maxOutputTokens, 512)
+    assert.match(requestBody.contents[0].parts[0].text, /untrusted citizen data/i)
+    return {
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                summary: '  A damaged road surface needs inspection.  ',
+                category: 'Road damage',
+                severity: 74,
+                department: 'Engineering',
+                safety_flags: ['Potential trip hazard'],
+                confidence: 0.91,
+              }),
+            }],
+          },
+        }],
+      }),
+    }
+  }
+
+  t.after(() => {
+    globalThis.fetch = previousFetch
+    if (previousKey === undefined) delete process.env.GEMINI_API_KEY
+    else process.env.GEMINI_API_KEY = previousKey
+    if (previousModel === undefined) delete process.env.GEMINI_MODEL
+    else process.env.GEMINI_MODEL = previousModel
+  })
+
+  const res = mockResponse()
+  await triageHandler({
+    method: 'POST',
+    headers: { 'x-real-ip': 'test-gemini-mock' },
+    body: { description: 'A damaged road surface needs inspection near the bus stop.', category: 'Road damage' },
+  }, res)
+
+  assert.equal(res.statusCode, 200)
+  assert.equal(res.body.triage.summary, 'A damaged road surface needs inspection.')
+  assert.equal(res.body.requires_human_review, true)
+})
