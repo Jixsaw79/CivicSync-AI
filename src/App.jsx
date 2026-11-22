@@ -358,6 +358,8 @@ function App() {
   const [category, setCategory] = useState('Road damage')
   const [zoneId, setZoneId] = useState('commercial')
   const [note, setNote] = useState('')
+  const [locationNote, setLocationNote] = useState('')
+  const [formError, setFormError] = useState('')
   const [imageName, setImageName] = useState('')
   const [fileData, setFileData] = useState('')
   const [imageDataUrl, setImageDataUrl] = useState('')
@@ -530,9 +532,18 @@ function App() {
     event.preventDefault()
     if (processing) return
     if (note.trim().length < 8) {
-      notify('Add at least 8 characters describing the issue')
+      const message = 'Please describe the issue in at least 8 characters.'
+      setFormError(message)
+      notify(message)
       return
     }
+    if (note.trim().length > 600) {
+      const message = 'Keep the description under 600 characters.'
+      setFormError(message)
+      notify(message)
+      return
+    }
+    setFormError('')
     setProcessing(true)
     setResult(null)
     try {
@@ -570,6 +581,7 @@ function App() {
         cost: { 'Road damage': 8600, Waterlogging: 6900, Streetlight: 2400, 'Waste accumulation': 1700 }[triage.category] ?? 2500,
         age: 'Just now',
         description: note.trim(),
+        locationNote: locationNote.trim(),
         duplicate: count ? `Potential duplicate cluster: ${count} similar report(s) in this zone` : 'No matching duplicate cluster found',
         imageData: imageDataUrl || null,
         aiSummary: triage.summary,
@@ -583,6 +595,8 @@ function App() {
       setResult(newReport)
       clearImage()
       setNote('')
+      setLocationNote('')
+      setFormError('')
       notify('AI triage complete · report added to the demonstration queue')
     } catch (error) {
       notify(error.message || 'AI triage failed')
@@ -820,19 +834,24 @@ function App() {
               </div>
 
               <div className="grid gap-6 xl:grid-cols-5">
-                <div className="xl:col-span-3">
+                <div className="order-2 xl:order-1 xl:col-span-3">
                   <ReportTable reports={filteredReports} onDispatch={dispatch} onStart={startWork} onResolve={resolve} onSelect={setSelectedReport} canManage={demoRole !== 'citizen'} />
                 </div>
 
-                <div className="panel p-5 xl:col-span-2">
-                  <div className="eyebrow">Citizen report simulator</div>
-                  <h3 className="mt-1 font-display text-lg font-extrabold text-slate-900 dark:text-white">Submit new issue</h3>
-                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Gemini AI triage · synthetic DNCC workflow</p>
+                <div className="panel order-1 p-5 sm:p-6 xl:order-2 xl:col-span-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="eyebrow">Citizen report simulator</div>
+                      <h3 className="mt-1 font-display text-lg font-extrabold text-slate-900 dark:text-white">Submit a civic issue</h3>
+                      <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">Share what happened and where. AI triage will create a demonstration report.</p>
+                    </div>
+                    <span className="hidden shrink-0 rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-bold text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 sm:inline-flex">STEP 1 · REPORT</span>
+                  </div>
 
                   <form onSubmit={analyze} className="mt-5 space-y-4">
                     <div>
-                      <label className="mb-1.5 block text-xs font-bold text-slate-600 dark:text-slate-300">Category</label>
-                      <select value={category} onChange={(e) => setCategory(e.target.value)} className="field">
+                      <label htmlFor="report-category" className="mb-1.5 block text-xs font-bold text-slate-600 dark:text-slate-300">Issue category</label>
+                      <select id="report-category" value={category} onChange={(e) => setCategory(e.target.value)} className="field min-h-12">
                         <option>Road damage</option>
                         <option>Waterlogging</option>
                         <option>Streetlight</option>
@@ -840,8 +859,8 @@ function App() {
                       </select>
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-xs font-bold text-slate-600 dark:text-slate-300">Zone</label>
-                      <select value={zoneId} onChange={(e) => setZoneId(e.target.value)} className="field">
+                      <label htmlFor="report-zone" className="mb-1.5 block text-xs font-bold text-slate-600 dark:text-slate-300">Area / zone</label>
+                      <select id="report-zone" value={zoneId} onChange={(e) => setZoneId(e.target.value)} className="field min-h-12">
                         {zones.map((z) => (
                           <option key={z.id} value={z.id}>
                             {z.name}
@@ -850,50 +869,42 @@ function App() {
                       </select>
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-xs font-bold text-slate-600 dark:text-slate-300">Description</label>
+                      <label htmlFor="report-location" className="mb-1.5 flex items-center gap-1.5 text-xs font-bold text-slate-600 dark:text-slate-300"><MapPin size={13} /> Nearby street / landmark <span className="font-normal text-slate-400">(optional)</span></label>
+                      <input id="report-location" value={locationNote} onChange={(e) => setLocationNote(e.target.value)} maxLength={100} placeholder="e.g. Beside the main gate, Road 12" className="field min-h-12" />
+                      <p className="mt-1 text-[10px] text-slate-400">A useful landmark helps distinguish the exact spot within the selected zone.</p>
+                    </div>
+                    <div>
+                      <div className="mb-1.5 flex items-center justify-between gap-2">
+                        <label htmlFor="report-description" className="block text-xs font-bold text-slate-600 dark:text-slate-300">What happened?</label>
+                        <span className={`text-[10px] font-semibold tabular-nums ${note.length > 560 ? 'text-amber-600' : 'text-slate-400'}`}>{note.length}/600</span>
+                      </div>
                       <textarea
+                        id="report-description"
                         value={note}
-                        onChange={(e) => setNote(e.target.value)}
-                        rows={3}
-                        placeholder="Describe the issue (keywords like school, hospital, flood raise severity)"
-                        className="field resize-none"
+                        onChange={(e) => { setNote(e.target.value); if (e.target.value.trim().length >= 8) setFormError('') }}
+                        rows={4}
+                        maxLength={600}
+                        required
+                        placeholder="Describe what you noticed, how long it has been happening, and who may be affected."
+                        className={`field resize-y ${formError ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/10' : ''}`}
+                        aria-describedby={formError ? 'report-description-error' : 'report-description-help'}
                       />
+                      {formError ? <p id="report-description-error" role="alert" className="mt-1.5 text-xs font-medium text-rose-600 dark:text-rose-400">{formError}</p> : <p id="report-description-help" className="mt-1.5 text-[10px] text-slate-400">Use at least 8 characters. Avoid sharing personal or sensitive information.</p>}
                     </div>
 
                     <div>
-                      <label className="mb-1.5 block text-xs font-bold text-slate-600 dark:text-slate-300">
-                        Attach supporting image <span className="font-normal text-slate-400">(optional)</span>
+                      <div className="mb-1.5 flex items-center justify-between gap-2">
+                        <label htmlFor="report-image" className="block text-xs font-bold text-slate-600 dark:text-slate-300">Photo evidence <span className="font-normal text-slate-400">(optional)</span></label>
+                        {fileData && <button type="button" onClick={clearImage} className="text-xs font-semibold text-rose-600 hover:underline dark:text-rose-400">Remove photo</button>}
+                      </div>
+                      <input ref={fileRef} id="report-image" type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={handleFileChange} />
+                      <label htmlFor="report-image" className="flex min-h-[116px] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 p-3 text-center transition hover:border-emerald-400 hover:bg-emerald-50/40 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:border-emerald-600 dark:hover:bg-emerald-950/20">
+                        {fileData ? <img src={fileData} alt="Preview of selected issue evidence" className="max-h-40 w-full rounded-xl object-cover" /> : <><CloudUpload size={25} className="text-slate-400" /><span className="mt-2 text-sm font-bold text-slate-700 dark:text-slate-200">Add a photo of the issue</span><span className="mt-1 text-xs text-slate-400">PNG, JPG or WEBP · up to 5 MB</span></>}
                       </label>
-                      <button
-                        type="button"
-                        onClick={() => fileRef.current?.click()}
-                        className="flex min-h-[140px] w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 p-4 text-center transition hover:border-emerald-400 hover:bg-emerald-50/40 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:border-emerald-600 dark:hover:bg-emerald-950/20"
-                      >
-                        <input
-                          ref={fileRef}
-                          type="file"
-                          accept="image/png,image/jpeg,image/webp"
-                          className="hidden"
-                          onChange={handleFileChange}
-                        />
-                        {fileData ? (
-                          <img src={fileData} alt="Selected issue" className="mb-2 max-h-24 rounded-lg object-cover" />
-                        ) : (
-                          <CloudUpload size={26} className="text-slate-400" />
-                        )}
-                        <span className="mt-1 text-sm font-bold text-slate-700 dark:text-slate-200">
-                          {imageName || 'Upload an issue photo'}
-                        </span>
-                        <span className="mt-0.5 text-xs text-slate-400">PNG, JPG or WEBP · max 5 MB · local only</span>
-                      </button>
-                      {fileData && (
-                        <button type="button" onClick={clearImage} className="mt-2 text-xs font-semibold text-rose-600 hover:underline dark:text-rose-400">
-                          Remove image
-                        </button>
-                      )}
+                      <p className="mt-1.5 text-[10px] text-slate-400">The image stays in this browser’s local demo storage.</p>
                     </div>
 
-                    <button type="submit" disabled={processing} className="btn-primary w-full">
+                    <button type="submit" disabled={processing} className="btn-primary min-h-12 w-full text-sm">
                       {processing ? (
                         <>
                           <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
@@ -908,13 +919,13 @@ function App() {
                   </form>
 
                   {result && (
-                    <div className="mt-5 animate-slide-up rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-950/30">
+                    <div className="mt-5 animate-slide-up rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-950/30" role="status" aria-live="polite">
                       <div className="flex items-center gap-2 text-sm font-bold text-emerald-800 dark:text-emerald-300">
-                        <CheckCircle2 size={16} /> Triage complete
+                        <CheckCircle2 size={17} /> Report created successfully
                       </div>
-                      <p className="mt-1 text-sm text-emerald-900 dark:text-emerald-200">
-                        {result.id} · Severity {result.severity} · {result.unit}
-                      </p>
+                      <p className="mt-1 text-sm text-emerald-900 dark:text-emerald-200">Reference <strong>{result.id}</strong> · Priority {result.severity}/100</p>
+                      <p className="mt-1 text-xs leading-5 text-emerald-800 dark:text-emerald-300">Your report has been added to the local demonstration queue and can be opened for its response timeline.</p>
+                      <button type="button" onClick={() => { setSelectedReport(result); setResult(null) }} className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-emerald-300 bg-white px-3 py-2 text-xs font-bold text-emerald-800 transition hover:bg-emerald-100 dark:border-emerald-800 dark:bg-slate-900 dark:text-emerald-300 dark:hover:bg-emerald-950/50">View report details <ArrowUpRight size={14} /></button>
                     </div>
                   )}
 
