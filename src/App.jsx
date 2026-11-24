@@ -153,9 +153,10 @@ function ZoneMap({ selected, onSelect, reports, onReportSelect }) {
   )
 }
 
-function ReportTable({ reports, onDispatch, onStart, onResolve, onSelect, canManage = true }) {
+function ReportTable({ reports, onDispatch, onStart, onResolve, onSelect, canManage = true, role = 'admin' }) {
   const renderAction = (report) => {
     if (!canManage) return <span className="text-xs font-medium text-slate-400">Staff access only</span>
+    if (role === 'staff' && report.status === 'Assigned') return <button onClick={() => onStart(report.id)} className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-xs font-bold text-sky-800 transition hover:bg-sky-50 dark:border-sky-800 dark:bg-slate-800 dark:text-sky-300 dark:hover:bg-sky-950/40">Start assigned work</button>
     if (report.status === 'Pending' || report.status === 'Assigned') {
       return <button onClick={() => onDispatch(report.id)} className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500">Dispatch crew</button>
     }
@@ -640,7 +641,7 @@ function App() {
 
   const startWork = (id) => {
     setReports((prev) =>
-      prev.map((r) => (r.id === id && r.status === 'Dispatched' ? { ...r, status: 'In progress', history: [...(r.history || []), { status: 'In progress', note: 'Department staff started the assigned work.', at: new Date().toISOString() }] } : r))
+      prev.map((r) => (r.id === id && (r.status === 'Dispatched' || r.status === 'Assigned') ? { ...r, status: 'In progress', history: [...(r.history || []), { status: 'In progress', note: 'Department staff started the assigned work.', at: new Date().toISOString() }] } : r))
     )
     addNotification(`Department work started for ${id}.`)
     notify(`Work started for ${id}`)
@@ -798,6 +799,7 @@ function App() {
         municipalAdapter: municipal.adapter,
       }
       setReports((prev) => retainRecentEvidence([newReport, ...prev]))
+      addNotification(`New citizen report ${id} submitted in ${zone.name}.`)
       setResult(newReport)
       clearImage()
       setNote('')
@@ -1007,7 +1009,7 @@ function App() {
 
               <div className="mt-6">
                 <SectionHeading eyebrow="Operations" title="Priority maintenance queue" subtitle="Highest urgency items first." />
-                <ReportTable reports={filteredReports.slice(0, 6)} onDispatch={dispatch} onStart={startWork} onResolve={resolve} onSelect={setSelectedReport} canManage={demoRole !== 'citizen'} />
+                <ReportTable reports={filteredReports.slice(0, 6)} onDispatch={dispatch} onStart={startWork} onResolve={resolve} onSelect={setSelectedReport} canManage={demoRole !== 'citizen'} role={demoRole} />
               </div>
             </>
           )}
