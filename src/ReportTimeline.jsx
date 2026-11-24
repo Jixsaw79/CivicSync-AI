@@ -1,5 +1,3 @@
-const stageLabels = ['Submitted', 'AI triage completed', 'Assigned', 'In progress', 'Resolved']
-
 function getTimelineEntries(report) {
   if (Array.isArray(report.history) && report.history.length) return report.history
   const entries = [{ status: 'Submitted', note: 'Seeded demonstration record. Original event time is not available.', at: null }]
