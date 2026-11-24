@@ -138,7 +138,7 @@ function ZoneMap({ selected, onSelect, reports, onReportSelect }) {
           <span className="flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-full bg-rose-500" />High</span>
         </div>
       </div>
-      <Suspense fallback={<div className="grid h-[390px] place-items-center bg-slate-50 text-sm text-slate-500 dark:bg-slate-800 dark:text-slate-400" role="status">Loading interactive map…</div>}>
+      <Suspense fallback={<div className="grid h-[300px] sm:h-[390px] place-items-center bg-slate-50 text-sm text-slate-500 dark:bg-slate-800 dark:text-slate-400" role="status">Loading interactive map…</div>}>
         <MapView zones={zones} reports={reports} selected={selected} onSelect={(id) => onSelect(selected === id ? null : id)} onReportSelect={onReportSelect} />
       </Suspense>
       {selected && (
@@ -327,14 +327,14 @@ function ReportModal({ report, onClose }) {
     <div
       ref={dialogRef}
       tabIndex={-1}
-      className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm"
+      className="modal-backdrop fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/50 p-3 backdrop-blur-sm sm:items-center sm:p-4"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-labelledby="report-modal-title"
     >
       <div
-        className="modal-panel w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-900 dark:border dark:border-slate-700"
+        className="modal-panel my-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-4 shadow-2xl dark:border dark:border-slate-700 dark:bg-slate-900 sm:max-h-[calc(100dvh-2rem)] sm:p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between">
@@ -443,16 +443,16 @@ function ConfirmDialog({ open, title, message, confirmLabel, onConfirm, onCancel
     <div
       ref={dialogRef}
       tabIndex={-1}
-      className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto bg-slate-950/40 p-3 backdrop-blur-sm sm:items-center sm:p-4"
       onClick={onCancel}
       role="dialog"
       aria-modal="true"
       aria-label={title}
     >
-      <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl dark:bg-slate-900 dark:border dark:border-slate-700" onClick={(e) => e.stopPropagation()}>
+      <div className="my-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-sm overflow-y-auto rounded-2xl bg-white p-4 shadow-2xl dark:border dark:border-slate-700 dark:bg-slate-900 sm:p-5" onClick={(e) => e.stopPropagation()}>
         <h3 className="font-display text-lg font-bold text-slate-900 dark:text-white">{title}</h3>
         <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{message}</p>
-        <div className="mt-5 flex justify-end gap-2">
+        <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button onClick={onCancel} className="btn-secondary text-xs">Cancel</button>
           <button onClick={onConfirm} className="btn-primary text-xs">{confirmLabel}</button>
         </div>
@@ -848,7 +848,7 @@ function App() {
   if (showLogin) return <DemoLogin onLogin={handleDemoLogin} onCancel={() => setShowLogin(false)} />
 
   return (
-    <div className="min-h-screen bg-[#f5f7f6] text-slate-800 transition-colors dark:bg-[#0b1220] dark:text-slate-200">
+    <div className="min-h-screen overflow-x-hidden bg-[#f5f7f6] text-slate-800 transition-colors dark:bg-[#0b1220] dark:text-slate-200">
       <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-white focus:px-4 focus:py-3 focus:font-bold focus:text-emerald-800 focus:shadow-xl">Skip to main content</a>
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[248px] flex-col border-r border-slate-200 bg-white px-5 py-6 dark:border-slate-800 dark:bg-slate-950 lg:flex">
         <Brand />
@@ -891,7 +891,7 @@ function App() {
 
       <main id="main-content" tabIndex={-1} className="min-h-screen outline-none lg:pl-[248px]">
         <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/90">
-          <div className="flex h-[72px] items-center justify-between px-4 sm:px-7 lg:px-9">
+          <div className="flex min-h-[64px] items-center justify-between gap-2 px-3 sm:h-[72px] sm:px-7 lg:px-9">
             <div className="flex items-center gap-3">
               <div className="lg:hidden">
                 <Brand />
@@ -919,9 +919,9 @@ function App() {
               <div className="hidden items-center gap-2 sm:flex">{demoUser ? <><span className="text-right"><span className="block text-xs font-bold text-slate-800 dark:text-slate-100">{demoUser.name}</span><span className="block text-[10px] capitalize text-slate-400">{demoRole} · demo account</span></span><button onClick={handleDemoLogout} className="btn-secondary min-h-9 text-xs">Sign out</button></> : <button onClick={() => setShowLogin(true)} className="btn-primary min-h-9 text-xs">Profile · Sign in</button>}</div>
             </div>
           </div>
-          <div className="flex items-center gap-2 border-t border-slate-100 px-4 py-2 dark:border-slate-800 lg:hidden">
+          <div className="flex min-w-0 items-center gap-2 border-t border-slate-100 px-3 py-2 dark:border-slate-800 lg:hidden">
             {demoUser ? <button onClick={handleDemoLogout} className="btn-secondary min-h-9 shrink-0 text-xs">Sign out</button> : <button onClick={() => setShowLogin(true)} className="btn-primary min-h-9 shrink-0 text-xs">Profile · Sign in</button>}
-            <nav aria-label="Primary navigation" className="flex min-w-0 gap-1 overflow-x-auto">
+            <nav aria-label="Primary navigation" className="scrollbar-hide flex min-w-0 flex-1 touch-pan-x gap-1 overflow-x-auto overscroll-x-contain">
               {nav.map((item) => {
                 const Icon = item.icon
                 return (
@@ -929,7 +929,7 @@ function App() {
                     key={item.id}
                     onClick={() => setActiveView(item.id)}
                     aria-current={activeView === item.id ? 'page' : undefined}
-                    className={`flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold ${
+                    className={`flex min-h-10 shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold ${
                       activeView === item.id
                         ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300'
                         : 'text-slate-500 dark:text-slate-400'
@@ -944,7 +944,7 @@ function App() {
           </div>
         </header>
 
-        <div className="mx-auto max-w-[1500px] px-4 py-7 sm:px-7 lg:px-9 lg:py-9">
+        <div className="mx-auto min-w-0 max-w-[1500px] px-3 py-5 sm:px-7 sm:py-7 lg:px-9 lg:py-9">
           <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
             <div>
               <div className="eyebrow flex items-center gap-2">
@@ -1177,8 +1177,8 @@ function App() {
 
           {activeView === 'reports' && (
             <>
-              <div className="mb-6 flex flex-wrap items-center gap-3">
-                <div className="relative flex-1 min-w-[200px]">
+              <div className="mb-6 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
+                <div className="relative col-span-2 min-w-0 sm:flex-1">
                   <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     value={search}
@@ -1196,21 +1196,21 @@ function App() {
                     </button>
                   )}
                 </div>
-                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="field w-auto min-w-[140px]">
+                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="field w-full min-w-0 sm:w-auto sm:min-w-[140px]">
                   <option>All statuses</option>
                   <option>Pending</option>
                   <option>Assigned</option>
                   <option>Dispatched</option>
                   <option>In progress</option>
                 </select>
-                <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="field w-auto min-w-[155px]">
+                <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="field w-full min-w-0 sm:w-auto sm:min-w-[155px]">
                   <option>All categories</option>
                   <option>Road damage</option>
                   <option>Waterlogging</option>
                   <option>Streetlight</option>
                   <option>Waste accumulation</option>
                 </select>
-                <select value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value)} className="field w-auto min-w-[145px]">
+                <select value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value)} className="field w-full min-w-0 sm:w-auto sm:min-w-[145px]">
                   <option>All priorities</option>
                   <option>Critical</option>
                   <option>High</option>
@@ -1561,7 +1561,7 @@ function App() {
       />
 
       {toast && (
-        <div className="fixed bottom-5 right-5 z-[60] flex animate-slide-up items-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-xl dark:bg-emerald-900">
+        <div className="fixed bottom-3 left-3 right-3 z-[60] flex max-w-xl animate-slide-up items-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-xl sm:bottom-5 sm:left-auto sm:right-5 dark:bg-emerald-900">
           <Check size={16} className="text-emerald-400" />
           {toast}
         </div>

@@ -25,8 +25,8 @@ export default function DemoLogin({ onLogin, onCancel }) {
   }
 
   return (
-    <main className="min-h-screen bg-[#f5f7f6] px-4 py-10 text-slate-800 dark:bg-[#0b1220] dark:text-slate-100">
-      <div className="mx-auto grid min-h-[80vh] max-w-5xl items-center gap-8 lg:grid-cols-[1.1fr_.9fr]">
+    <main className="min-h-screen bg-[#f5f7f6] px-3 py-6 text-slate-800 dark:bg-[#0b1220] dark:text-slate-100 sm:px-4 sm:py-10">
+      <div className="mx-auto grid min-h-[calc(100dvh-3rem)] max-w-5xl items-center gap-6 lg:min-h-[80vh] lg:gap-8 lg:grid-cols-[1.1fr_.9fr]">
         <section className="hidden lg:block">
           <div className="flex items-center gap-3">
             <span className="grid h-12 w-12 place-items-center rounded-2xl bg-emerald-800 text-white"><Activity size={25} /></span>
@@ -36,7 +36,7 @@ export default function DemoLogin({ onLogin, onCancel }) {
           <p className="mt-5 max-w-lg text-base leading-7 text-slate-500 dark:text-slate-400">A connected demonstration workflow for citizens, municipal staff and administrators.</p>
           <div className="mt-8 flex flex-wrap gap-3 text-xs font-semibold text-slate-500 dark:text-slate-400"><span className="rounded-full bg-white px-3 py-2 dark:bg-slate-900">Report issues</span><span className="rounded-full bg-white px-3 py-2 dark:bg-slate-900">Assign response teams</span><span className="rounded-full bg-white px-3 py-2 dark:bg-slate-900">Track progress</span></div>
         </section>
-        <section className="mx-auto w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-900 sm:p-8">
+        <section className="mx-auto w-full max-w-md rounded-3xl border border-slate-200 bg-white p-4 shadow-xl dark:border-slate-800 dark:bg-slate-900 sm:p-8">
           <div className="mb-7 lg:hidden"><div className="flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-xl bg-emerald-800 text-white"><Activity size={22} /></span><div className="font-display text-xl font-extrabold">CivicSync <span className="text-emerald-700 dark:text-emerald-400">AI</span></div></div></div>
           <div className="mb-5 flex justify-end"><button type="button" onClick={onCancel} className="btn-secondary min-h-9 text-xs">Back to public website</button></div><div className="eyebrow">Welcome back</div>
           <h2 className="mt-1 font-display text-2xl font-extrabold text-slate-950 dark:text-white">Sign in to CivicSync</h2>
