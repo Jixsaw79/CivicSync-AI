@@ -18,6 +18,7 @@ export default function MapView({ zones = [], reports = [], selected, onSelect, 
   const [status, setStatus] = useState('All statuses')
   const [priority, setPriority] = useState('All priorities')
   const [showHotspots, setShowHotspots] = useState(true)
+  const [tileError, setTileError] = useState(false)
 
   const points = useMemo(() => zones.map((zone) => {
     const zoneReports = reports.filter((report) => report.zoneId === zone.id)
@@ -89,6 +90,10 @@ export default function MapView({ zones = [], reports = [], selected, onSelect, 
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          eventHandlers={{
+            tileerror: () => setTileError(true),
+            load: () => setTileError(false),
+          }}
         />
         {showHotspots && points.map((point) => point.count > 0 && (
           <Circle
@@ -143,6 +148,11 @@ export default function MapView({ zones = [], reports = [], selected, onSelect, 
           </CircleMarker>
         ))}
       </MapContainer>
+      {tileError && (
+        <p role="status" className="border-t border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+          Map tiles could not be loaded. Check your connection; report data and the rest of the dashboard remain available.
+        </p>
+      )}
       <div className="flex flex-col gap-2 bg-slate-50 px-3 py-3 text-[10px] text-slate-500 dark:bg-slate-900 dark:text-slate-400">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <strong className="text-slate-700 dark:text-slate-200">Severity</strong>
