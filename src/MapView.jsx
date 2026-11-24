@@ -59,14 +59,14 @@ export default function MapView({ zones = [], reports = [], selected, onSelect, 
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
-        <select value={category} onChange={(event) => setCategory(event.target.value)} className="field min-w-0 w-full flex-1 py-2 text-xs sm:min-w-[145px]" aria-label="Filter map by category">
+        <select value={category} onChange={(event) => setCategory(event.target.value)} className="field min-w-0 w-full flex-1 py-2 text-xs sm:w-auto sm:min-w-[145px]" aria-label="Filter map by category">
           <option>All categories</option>
           <option>Road damage</option>
           <option>Waterlogging</option>
           <option>Streetlight</option>
           <option>Waste accumulation</option>
         </select>
-        <select value={status} onChange={(event) => setStatus(event.target.value)} className="field min-w-0 w-full flex-1 py-2 text-xs sm:min-w-[130px]" aria-label="Filter map by status">
+        <select value={status} onChange={(event) => setStatus(event.target.value)} className="field min-w-0 w-full flex-1 py-2 text-xs sm:w-auto sm:min-w-[130px]" aria-label="Filter map by status">
           <option>All statuses</option>
           <option>Pending</option>
           <option>Assigned</option>
@@ -74,7 +74,7 @@ export default function MapView({ zones = [], reports = [], selected, onSelect, 
           <option>In progress</option>
           <option>Resolved</option>
         </select>
-        <select value={priority} onChange={(event) => setPriority(event.target.value)} className="field min-w-[130px] flex-1 py-2 text-xs" aria-label="Filter map by priority">
+        <select value={priority} onChange={(event) => setPriority(event.target.value)} className="field min-w-0 w-full flex-1 py-2 text-xs sm:w-auto sm:min-w-[130px]" aria-label="Filter map by priority">
           <option>All priorities</option>
           <option>Critical</option>
           <option>High</option>
