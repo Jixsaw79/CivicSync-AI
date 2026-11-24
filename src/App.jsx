@@ -667,6 +667,8 @@ function App() {
 
   const resetDemoData = () => {
     setReports(initialReports)
+    setFeedback({})
+    setNotifications([])
     setSelectedReport(null)
     setSelectedZone(null)
     setSearch('')
