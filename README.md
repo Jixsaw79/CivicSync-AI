@@ -42,7 +42,7 @@ Vite serves the frontend only. The Gemini and mock municipal API routes live in 
 
 ## Architecture overview
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the application flow, frontend modules, API boundaries and demo-data lifecycle.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the application flow, frontend modules, API boundaries and demo-data lifecycle. For a presenter-led judging sequence, see [docs/DEMO-WALKTHROUGH.md](docs/DEMO-WALKTHROUGH.md).
 
 ## Configure real AI inference
 
