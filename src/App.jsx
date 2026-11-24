@@ -11,6 +11,8 @@ import { loadStoredReports, readThemePreference, retainRecentEvidence } from './
 import { buildReportsCsv } from './csv'
 import DemoLogin from './DemoLogin'
 import WorkflowFeatures from './WorkflowFeatures'
+import ReportTimeline from './ReportTimeline'
+import PanelErrorBoundary from './PanelErrorBoundary'
 import { demoStaff } from './demo-workflow'
 
 const MapView = lazy(() => import('./MapView'))
@@ -138,9 +140,11 @@ function ZoneMap({ selected, onSelect, reports, onReportSelect }) {
           <span className="flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-full bg-rose-500" />High</span>
         </div>
       </div>
-      <Suspense fallback={<div className="grid h-[300px] sm:h-[390px] place-items-center bg-slate-50 text-sm text-slate-500 dark:bg-slate-800 dark:text-slate-400" role="status">Loading interactive map…</div>}>
-        <MapView zones={zones} reports={reports} selected={selected} onSelect={(id) => onSelect(selected === id ? null : id)} onReportSelect={onReportSelect} />
-      </Suspense>
+      <PanelErrorBoundary label="Map">
+        <Suspense fallback={<div className="grid h-[300px] sm:h-[390px] place-items-center bg-slate-50 text-sm text-slate-500 dark:bg-slate-800 dark:text-slate-400" role="status">Loading interactive map…</div>}>
+          <MapView zones={zones} reports={reports} selected={selected} onSelect={(id) => onSelect(selected === id ? null : id)} onReportSelect={onReportSelect} />
+        </Suspense>
+      </PanelErrorBoundary>
       {selected && (
         <div className="mt-3 flex items-center justify-between rounded-xl bg-emerald-50 px-3 py-2.5 text-sm dark:bg-emerald-950/40">
           <span className="font-semibold text-emerald-900 dark:text-emerald-200">
@@ -223,12 +227,12 @@ function ReportTable({ reports, onDispatch, onStart, onResolve, onSelect, canMan
         <table className="w-full min-w-[760px] text-left text-sm">
           <thead className="bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:bg-slate-800/80 dark:text-slate-500">
             <tr>
-              <th className="px-5 py-3">Issue / Zone</th>
-              <th className="px-4 py-3">Urgency</th>
-              <th className="px-4 py-3">People impacted</th>
-              <th className="px-4 py-3">Est. cost</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-5 py-3 text-right">Action</th>
+              <th scope="col" className="px-5 py-3">Issue / Zone</th>
+              <th scope="col" className="px-4 py-3">Urgency</th>
+              <th scope="col" className="px-4 py-3">People impacted</th>
+              <th scope="col" className="px-4 py-3">Est. cost</th>
+              <th scope="col" className="px-4 py-3">Status</th>
+              <th scope="col" className="px-5 py-3 text-right">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -376,19 +380,8 @@ function ReportModal({ report, onClose }) {
         </div>
 
         <div className="mt-5">
-          <div className="text-xs font-bold uppercase tracking-wider text-slate-400">Response history</div>
-          <div className="mt-3 space-y-3">
-            {(report.history?.length ? report.history : [{ status: 'Submitted', note: 'Seeded demonstration report.', at: null }, ...(report.status !== 'Pending' && report.status !== 'Assigned' ? [{ status: report.status, note: 'Current demonstration status.', at: null }] : [])]).map((entry, index) => (
-              <div key={entry.status + index} className="flex gap-3">
-                <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-emerald-500 ring-4 ring-emerald-100 dark:ring-emerald-950" />
-                <div className="min-w-0">
-                  <div className="text-sm font-bold text-slate-800 dark:text-slate-100">{entry.status}</div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{entry.note}</p>
-                  {entry.at && <p className="mt-0.5 text-[10px] text-slate-400">{new Date(entry.at).toLocaleString()}</p>}
-                </div>
-              </div>
-            ))}
-          </div>
+          <div className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">Response timeline</div>
+          <ReportTimeline report={report} />
         </div>
 
         {report.aiSummary ? (
@@ -399,11 +392,18 @@ function ReportModal({ report, onClose }) {
               </div>
               {Number.isFinite(report.confidence) && (
                 <span className="rounded-full bg-white/80 px-2 py-1 text-[10px] font-bold text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200">
-                  {Math.round(report.confidence * 100)}% confidence
+                  Model self-assessment: {Math.round(report.confidence * 100)}%
                 </span>
               )}
             </div>
             <p className="mt-2 text-sm leading-5 text-emerald-950 dark:text-emerald-100">{report.aiSummary}</p>
+            {report.triageRationale && (
+              <div className="mt-3 rounded-lg bg-white/75 p-3 dark:bg-slate-900/50">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">Why the AI suggested this</div>
+                <p className="mt-1 text-xs leading-5 text-emerald-950 dark:text-emerald-100">{report.triageRationale}</p>
+              </div>
+            )}
+            <p className="mt-2 text-[10px] leading-4 text-emerald-800 dark:text-emerald-300">The model's self-assessment is not independently calibrated and should not be interpreted as a probability of correctness.</p>
             <p className="mt-2 text-xs text-emerald-900 dark:text-emerald-200">
               Severity score {report.severity}/100 · {report.duplicate}
             </p>
@@ -785,7 +785,10 @@ function App() {
         longitude: zone.longitude,
         severity: triage.severity,
         status: 'Pending',
-        history: [{ status: 'Submitted', note: 'Citizen report received and queued for AI triage.', at: new Date().toISOString() }],
+        history: [
+          { status: 'Submitted', note: 'Citizen report received in the browser-local demonstration workflow.', at: new Date().toISOString() },
+          { status: 'AI triage completed', note: 'Gemini generated a suggested classification and rationale. Human review is required.', at: new Date().toISOString() },
+        ],
         unit: routedDepartment,
         impact: Math.round(zone.population * (triage.severity / 100) * 0.12),
         cost: { 'Road damage': 8600, Waterlogging: 6900, Streetlight: 2400, 'Waste accumulation': 1700 }[triage.category] ?? 2500,
@@ -795,6 +798,7 @@ function App() {
         duplicate: count ? `Potential duplicate cluster: ${count} similar report(s) in this zone` : 'No matching duplicate cluster found',
         imageData: imageDataUrl || null,
         aiSummary: triage.summary,
+        triageRationale: triage.rationale,
         confidence: triage.confidence,
         safetyFlags: triage.safety_flags || [],
         requiresHumanReview: true,
@@ -810,7 +814,9 @@ function App() {
       setFormError('')
       notify('AI triage complete · report added to the demonstration queue')
     } catch (error) {
-      notify(error.message || 'AI triage failed')
+      const message = error.message || 'AI triage failed. Check your connection and try again.'
+      setFormError(message)
+      notify(message)
     } finally {
       setProcessing(false)
     }
@@ -1385,18 +1391,7 @@ function App() {
 
                       <div className="mt-5 border-t border-slate-100 pt-4 dark:border-slate-800">
                         <div className="mb-3 text-[10px] font-bold uppercase tracking-wider text-slate-400">Response timeline</div>
-                        <div className="grid gap-3 sm:grid-cols-3">
-                          {(report.history?.length ? report.history : [{ status: 'Submitted', note: 'Report received.' }]).map((entry, index) => (
-                            <div key={entry.status + index} className="flex gap-2.5">
-                              <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${index === (report.history?.length || 1) - 1 ? 'bg-emerald-500 ring-4 ring-emerald-100 dark:ring-emerald-950' : 'bg-slate-300 dark:bg-slate-600'}`} />
-                              <div className="min-w-0">
-                                <div className="text-xs font-bold text-slate-800 dark:text-slate-100">{entry.status}</div>
-                                <p className="mt-0.5 text-[11px] leading-5 text-slate-500 dark:text-slate-400">{entry.note}</p>
-                                {entry.at && <p className="mt-1 text-[10px] text-slate-400">{new Date(entry.at).toLocaleString()}</p>}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
+                        <ReportTimeline report={report} compact />
                       </div>
                     </article>
                   ))}
@@ -1421,18 +1416,22 @@ function App() {
                   <div className="eyebrow">Department workload</div>
                   <h3 className="mt-1 font-display text-lg font-extrabold text-slate-900 dark:text-white">Reports by responsible unit</h3>
                   <div className="mt-5 h-72">
+                    <PanelErrorBoundary label="Chart">
                     <Suspense fallback={<div className="grid h-full place-items-center text-xs text-slate-400" role="status">Loading chart…</div>}>
                       <ChartRenderer type="department" data={departmentSummary} />
                     </Suspense>
+                  </PanelErrorBoundary>
                   </div>
                 </div>
                 <div className="panel p-5 xl:col-span-2">
                   <div className="eyebrow">Service status</div>
                   <h3 className="mt-1 font-display text-lg font-extrabold text-slate-900 dark:text-white">Complaint lifecycle</h3>
                   <div className="mt-5 h-64">
+                    <PanelErrorBoundary label="Chart">
                     <Suspense fallback={<div className="grid h-full place-items-center text-xs text-slate-400" role="status">Loading chart…</div>}>
                       <ChartRenderer type="lifecycle" data={statusSummary} />
                     </Suspense>
+                  </PanelErrorBoundary>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     {statusSummary.map((entry) => (
@@ -1474,9 +1473,11 @@ function App() {
                   <div className="eyebrow">Budget allocation</div>
                   <h3 className="mt-1 font-display text-lg font-extrabold text-slate-900 dark:text-white">Traditional vs optimized</h3>
                   <div className="mt-5 h-64">
+                    <PanelErrorBoundary label="Chart">
                     <Suspense fallback={<div className="grid h-full place-items-center text-xs text-slate-400" role="status">Loading chart…</div>}>
                       <ChartRenderer type="allocation" data={allocationData} darkMode={darkMode} />
                     </Suspense>
+                  </PanelErrorBoundary>
                   </div>
                   <div className="mt-4 flex items-center justify-between text-sm">
                     <span className="text-slate-500 dark:text-slate-400">Total traditional: {manualTotal} units</span>
@@ -1561,7 +1562,7 @@ function App() {
       />
 
       {toast && (
-        <div className="fixed bottom-3 left-3 right-3 z-[60] flex max-w-xl animate-slide-up items-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-xl sm:bottom-5 sm:left-auto sm:right-5 dark:bg-emerald-900">
+        <div role="status" aria-live="polite" aria-atomic="true" className="fixed bottom-3 left-3 right-3 z-[60] flex max-w-xl animate-slide-up items-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-xl sm:bottom-5 sm:left-auto sm:right-5 dark:bg-emerald-900">
           <Check size={16} className="text-emerald-400" />
           {toast}
         </div>
