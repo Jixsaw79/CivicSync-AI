@@ -32,7 +32,7 @@ export default function WorkflowFeatures({ role, reports, notifications, onMarkR
   return <div className="mb-6 grid gap-5 xl:grid-cols-2">
     {role === 'admin' && <AssignmentPanel reports={reports} onAssign={onAssign}/>}
     {role === 'admin' && <HotspotPanel reports={reports}/>}
-    {role !== 'citizen' && <EscalationPanel reports={reports} onSelect={onSelect}/>}
+    {(role === 'staff' || role === 'admin') && <EscalationPanel reports={reports} onSelect={onSelect}/>}
     {role === 'citizen' && <FeedbackPanel reports={myReports} feedback={feedback} onFeedback={onFeedback}/>}
     <NotificationPanel notifications={notifications} onMarkRead={onMarkRead}/>
   </div>
