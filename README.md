@@ -67,7 +67,7 @@ Use one of these public sample accounts on the sign-in screen:
 
 These are intentionally public demonstration credentials. Sign-in is a **presentation-only demo gate**, not real authentication: credentials are embedded in the public frontend, roles are not server-authorized, and no private user accounts should be created. The demo session is kept in `sessionStorage` and ends when the user signs out or the browser session is cleared.
 
-Reports, staff assignments, notifications and citizen feedback persist only in the current browser using `localStorage`. They are not shared between browsers or users. The staff work queue shows reports assigned to the sample staff account. Hotspots are calculated from the local report snapshot. Priority escalation flags reports with severity 90+ or an age of at least 48 hours; these are illustrative review prompts, not official SLA breaches. Resolution feedback is local demonstration data. Seed reports, issue density, budget figures, population impact, dispatch times, sample departments, ward labels and service targets are synthetic.
+Reports, staff assignments, notifications and citizen feedback persist only in the current browser using `localStorage`. They are not shared between browsers or users. The generic demo staff workspace can act on reports assigned to the sample staff roster. Hotspots are calculated from the local report snapshot. Priority escalation flags reports with severity 90+ or an age of at least 48 hours; these are illustrative review prompts, not official SLA breaches. Resolution feedback is local demonstration data. Seed reports, issue density, budget figures, population impact, dispatch times, sample departments, ward labels and service targets are synthetic.
 
 ## DNCC simulation boundary
 
