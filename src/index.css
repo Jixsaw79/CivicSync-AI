@@ -102,3 +102,16 @@ button:disabled { cursor: not-allowed; }
 .modal-panel {
   animation: slideUp 0.3s ease-out;
 }
+
+/* Mobile layout helpers */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+
+@media (max-width: 640px) {
+  html, body, #root { max-width: 100%; overflow-x: clip; }
+  input, select, textarea { max-width: 100%; }
+  button, a, select { -webkit-tap-highlight-color: transparent; }
+}
