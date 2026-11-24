@@ -13,7 +13,7 @@ CivicSync AI demonstrates how a citizen report could be analyzed, mapped, routed
 - Real Gemini-powered triage through a server-side API endpoint.
 - Synthetic department routing through a mock DNCC adapter.
 - Demonstration report queue with dispatch and resolution workflow.
-- Demo sign-in for Citizen, Department Staff and Administrator with role-specific workspaces and sample credentials.
+- Public website browsing without an account; sign in from the profile area only when entering a Citizen, Department Staff or Administrator demo workspace.
 - Staff assignment workflow, staff-only assigned work queue and report status history.
 - In-app activity notifications, complaint hotspot summaries, priority escalation flags and citizen resolution feedback.
 - Duplicate-report cluster hints, CSV export and sample-data reset controls.
@@ -57,7 +57,7 @@ If the key is missing or Gemini fails, the app shows an error and does not creat
 
 ## Demo accounts and data
 
-Use one of these public sample accounts on the sign-in screen:
+The public dashboard, transparency view and sample reports can be browsed without signing in. Use the **Profile · Sign in** control in the site header when you want to enter a role-specific demo workspace or submit a citizen report. Use one of these public sample accounts on the sign-in screen:
 
 | Role | Email | Password |
 |---|---|---|
