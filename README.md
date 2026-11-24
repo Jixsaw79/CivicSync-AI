@@ -20,10 +20,18 @@ CivicSync AI demonstrates how a citizen report could be analyzed, mapped, routed
 - Browser-local persistence through localStorage and session-only demo sign-in.
 - Dark mode, mobile-responsive layout, keyboard focus indicators, reduced-motion support and graceful fallback states for map/chart failures.
 
+## Recent polish (design system)
+
+- Refined panel system with subtle glass / backdrop-blur treatment and improved light/dark contrast.
+- Stronger focus rings, smoother micro-interactions and hover states on cards and buttons.
+- Enhanced Demo Login experience with mesh background, gradient brand mark and clearer visual hierarchy.
+- Expanded Tailwind tokens (richer shadows, scale-in animation, mesh backgrounds).
+- Better selection colors, scrollbar styling and forced-colors accessibility support.
+
 ## Technology
 
 - React 18 + Vite
-- Tailwind CSS
+- Tailwind CSS 3
 - Leaflet + React Leaflet + OpenStreetMap
 - Recharts
 - Vercel serverless functions
