@@ -59,14 +59,14 @@ export default function MapView({ zones = [], reports = [], selected, onSelect, 
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
-        <select value={category} onChange={(event) => setCategory(event.target.value)} className="field min-w-[145px] flex-1 py-2 text-xs" aria-label="Filter map by category">
+        <select value={category} onChange={(event) => setCategory(event.target.value)} className="field min-w-0 w-full flex-1 py-2 text-xs sm:min-w-[145px]" aria-label="Filter map by category">
           <option>All categories</option>
           <option>Road damage</option>
           <option>Waterlogging</option>
           <option>Streetlight</option>
           <option>Waste accumulation</option>
         </select>
-        <select value={status} onChange={(event) => setStatus(event.target.value)} className="field min-w-[130px] flex-1 py-2 text-xs" aria-label="Filter map by status">
+        <select value={status} onChange={(event) => setStatus(event.target.value)} className="field min-w-0 w-full flex-1 py-2 text-xs sm:min-w-[130px]" aria-label="Filter map by status">
           <option>All statuses</option>
           <option>Pending</option>
           <option>Assigned</option>
@@ -80,12 +80,12 @@ export default function MapView({ zones = [], reports = [], selected, onSelect, 
           <option>High</option>
           <option>Standard</option>
         </select>
-        <label className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+        <label className="flex min-h-10 items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
           <input type="checkbox" checked={showHotspots} onChange={(event) => setShowHotspots(event.target.checked)} />
           Hotspots
         </label>
       </div>
-      <MapContainer center={DEMO_DNCC_CENTER} zoom={12} scrollWheelZoom={false} className="h-[390px] w-full">
+      <MapContainer center={DEMO_DNCC_CENTER} zoom={12} scrollWheelZoom={false} className="h-[300px] w-full sm:h-[390px]">
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
