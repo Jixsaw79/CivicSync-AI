@@ -8,8 +8,8 @@ const accounts = [
 ]
 
 export default function DemoLogin({ onLogin, onCancel }) {
-  const [email, setEmail] = useState(accounts[2].email)
-  const [password, setPassword] = useState(accounts[2].password)
+  const [email, setEmail] = useState(accounts[0].email)
+  const [password, setPassword] = useState(accounts[0].password)
   const [error, setError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
 
