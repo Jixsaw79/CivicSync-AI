@@ -1217,7 +1217,7 @@ function App() {
 
               <div className="grid gap-6 xl:grid-cols-5">
                 <div className="order-2 xl:order-1 xl:col-span-3">
-                  <ReportTable reports={filteredReports} onDispatch={dispatch} onStart={startWork} onResolve={resolve} onSelect={setSelectedReport} canManage={demoRole !== 'citizen'} />
+                  <ReportTable reports={filteredReports} onDispatch={dispatch} onStart={startWork} onResolve={resolve} onSelect={setSelectedReport} canManage={demoRole !== 'citizen'} role={demoRole} />
                 </div>
 
                 <div className="panel order-1 p-5 sm:p-6 xl:order-2 xl:col-span-2">
