@@ -599,7 +599,7 @@ function App() {
       activeReports
         .filter(
           (r) =>
-            (demoRole !== 'staff' || r.assignedTo === demoUser?.id) &&
+            (demoRole !== 'staff' || Boolean(r.assignedTo)) &&
             (!selectedZone || r.zoneId === selectedZone) &&
             (statusFilter === 'All statuses' || r.status === statusFilter) &&
             (categoryFilter === 'All categories' || r.category === categoryFilter) &&
