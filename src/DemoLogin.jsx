@@ -3,7 +3,7 @@ import { Activity, ShieldCheck, UserRound, HardHat, ArrowRight, Eye, EyeOff } fr
 
 const accounts = [
   { email: 'citizen@civicsync.demo', password: 'Citizen@123', id: 'demo-citizen', name: 'Demo Citizen', role: 'citizen', label: 'Citizen', icon: UserRound, description: 'Submit issues and track their progress.' },
-  { email: 'staff@civicsync.demo', password: 'Staff@123', id: 'demo-staff', name: 'Demo Staff', role: 'staff', label: 'Department staff', icon: HardHat, description: 'Work on assigned complaints and record progress.' },
+  { email: 'staff@civicsync.demo', password: 'Staff@123', id: 'staff-engineering', name: 'A. Rahman', role: 'staff', label: 'Department staff', icon: HardHat, description: 'Work on assigned complaints and record progress.' },
   { email: 'admin@civicsync.demo', password: 'Admin@123', id: 'demo-admin', name: 'Demo Administrator', role: 'admin', label: 'Administrator', icon: ShieldCheck, description: 'Review reports, assign teams and monitor service trends.' },
 ]
 
