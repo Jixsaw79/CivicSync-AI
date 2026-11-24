@@ -85,6 +85,7 @@ test('Gemini triage fails explicitly when no server key is configured', async (t
 test('Gemini triage output validator rejects malformed provider output', () => {
   const valid = {
     summary: 'A damaged road surface needs inspection.',
+    rationale: 'The report describes a damaged road surface near a bus stop, supporting a road-damage classification and a safety review.',
     category: 'Road damage',
     severity: 75,
     department: 'Engineering',
@@ -95,6 +96,8 @@ test('Gemini triage output validator rejects malformed provider output', () => {
   assert.equal(isValidTriage({ ...valid, confidence: 1.2 }), false)
   assert.equal(isValidTriage({ ...valid, safety_flags: ['x'.repeat(101)] }), false)
   assert.equal(isValidTriage({ ...valid, summary: 'x'.repeat(141) }), false)
+  assert.equal(isValidTriage({ ...valid, rationale: 'too short' }), false)
+  assert.equal(isValidTriage({ ...valid, rationale: 'x'.repeat(321) }), false)
 })
 
 test('Gemini triage keeps the Gemini API key out of the request URL', async (t) => {
@@ -118,6 +121,7 @@ test('Gemini triage keeps the Gemini API key out of the request URL', async (t) 
             parts: [{
               text: JSON.stringify({
                 summary: '  A damaged road surface needs inspection.  ',
+                rationale: '  The report describes a damaged road surface near a bus stop, supporting a road-damage classification and a safety review.  ',
                 category: 'Road damage',
                 severity: 74,
                 department: 'Engineering',
@@ -148,5 +152,6 @@ test('Gemini triage keeps the Gemini API key out of the request URL', async (t) 
 
   assert.equal(res.statusCode, 200)
   assert.equal(res.body.triage.summary, 'A damaged road surface needs inspection.')
+  assert.match(res.body.triage.rationale, /damaged road surface/)
   assert.equal(res.body.requires_human_review, true)
 })
