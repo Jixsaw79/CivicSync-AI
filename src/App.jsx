@@ -845,7 +845,7 @@ function App() {
   const allocationTotal = allocationData.reduce((sum, d) => sum + d.optimized, 0)
   const manualTotal = allocationData.reduce((sum, d) => sum + d.traditional, 0)
 
-  if (showLogin) return <DemoLogin onLogin={handleDemoLogin} />
+  if (showLogin) return <DemoLogin onLogin={handleDemoLogin} onCancel={() => setShowLogin(false)} />
 
   return (
     <div className="min-h-screen bg-[#f5f7f6] text-slate-800 transition-colors dark:bg-[#0b1220] dark:text-slate-200">
@@ -1233,7 +1233,7 @@ function App() {
                     <span className="hidden shrink-0 rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-bold text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 sm:inline-flex">STEP 1 · REPORT</span>
                   </div>
 
-                  <form onSubmit={analyze} className="mt-5 space-y-4">
+                  {demoUser?.role === 'citizen' ? <form onSubmit={analyze} className="mt-5 space-y-4">
                     <div>
                       <label htmlFor="report-category" className="mb-1.5 block text-xs font-bold text-slate-600 dark:text-slate-300">Issue category</label>
                       <select id="report-category" value={category} onChange={(e) => setCategory(e.target.value)} className="field min-h-12">
@@ -1302,7 +1302,7 @@ function App() {
                         </>
                       )}
                     </button>
-                  </form>
+                  </form> : <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5 text-center dark:border-slate-700 dark:bg-slate-800/50"><ShieldCheck size={24} className="mx-auto text-emerald-700 dark:text-emerald-400" /><p className="mt-2 text-sm font-bold text-slate-800 dark:text-slate-100">Sign in as a citizen to submit a report</p><p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">You can browse the public dashboard and existing demonstration reports without signing in.</p><button type="button" onClick={() => setShowLogin(true)} className="btn-primary mt-4 min-h-10">Sign in to report an issue</button></div>}
 
                   {result && (
                     <div className="mt-5 animate-slide-up rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-950/30" role="status" aria-live="polite">
