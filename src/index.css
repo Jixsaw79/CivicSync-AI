@@ -29,6 +29,7 @@ button:disabled { cursor: not-allowed; }
 :focus-visible {
   outline: 3px solid #059669;
   outline-offset: 3px;
+  border-radius: 4px;
 }
 
 .dark :focus-visible {
@@ -114,4 +115,17 @@ button:disabled { cursor: not-allowed; }
   html, body, #root { max-width: 100%; overflow-x: clip; }
   input, select, textarea { max-width: 100%; }
   button, a, select { -webkit-tap-highlight-color: transparent; }
+}
+
+
+/* Accessibility: preserve visible focus in high-contrast operating-system themes. */
+@media (forced-colors: active) {
+  :focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 3px;
+  }
+
+  .btn-primary, .btn-secondary {
+    border: 1px solid ButtonText;
+  }
 }

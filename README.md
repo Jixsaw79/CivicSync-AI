@@ -10,15 +10,15 @@ CivicSync AI demonstrates how a citizen report could be analyzed, mapped, routed
 - Executive dashboard with synthetic issue, severity and resource indicators.
 - OpenStreetMap basemap centered on Dhaka North with illustrative neighborhood markers.
 - Citizen issue submission with image preview and client-side validation.
-- Real Gemini-powered triage through a server-side API endpoint.
+- Real Gemini-powered triage through a server-side API endpoint, with a short evidence-based rationale and explicit human-review requirement.
 - Synthetic department routing through a mock DNCC adapter.
 - Demonstration report queue with dispatch and resolution workflow.
 - Public website browsing without an account; sign in from the profile area only when entering a Citizen, Department Staff or Administrator demo workspace.
-- Staff assignment workflow, staff-only assigned work queue and report status history.
+- Staff assignment workflow, staff-only assigned work queue and an accessible report response timeline.
 - In-app activity notifications, complaint hotspot summaries, priority escalation flags and citizen resolution feedback.
 - Duplicate-report cluster hints, CSV export and sample-data reset controls.
 - Browser-local persistence through localStorage and session-only demo sign-in.
-- Dark mode, responsive layout and reduced-motion support.
+- Dark mode, mobile-responsive layout, keyboard focus indicators, reduced-motion support and graceful fallback states for map/chart failures.
 
 ## Technology
 
@@ -40,11 +40,15 @@ npm run dev
 
 Vite serves the frontend only. The Gemini and mock municipal API routes live in `api/` and are executed by Vercel, not by the Vite development server. To test the full workflow locally, use the Vercel CLI and run `vercel dev`.
 
+## Architecture overview
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the application flow, frontend modules, API boundaries and demo-data lifecycle. For a presenter-led judging sequence, see [docs/DEMO-WALKTHROUGH.md](docs/DEMO-WALKTHROUGH.md).
+
 ## Configure real AI inference
 
 Set `GEMINI_API_KEY` as a server-side environment variable in Vercel. Optionally set `GEMINI_MODEL` (defaults to `gemini-2.5-flash`). Never add the key to a `VITE_*` variable or commit it to Git.
 
-If the key is missing or Gemini fails, the app shows an error and does not create a fake AI result.
+If the key is missing or Gemini fails, the app shows an actionable error and does not create a fake AI result. Successful triage includes a short rationale grounded in the submitted description. The displayed model self-assessment is not independently calibrated and must not be interpreted as a probability of correctness. Gemini output remains a suggestion; staff review is required.
 
 ## Deploy a hackathon preview
 
