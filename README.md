@@ -13,8 +13,11 @@ CivicSync AI demonstrates how a citizen report could be analyzed, mapped, routed
 - Real Gemini-powered triage through a server-side API endpoint.
 - Synthetic department routing through a mock DNCC adapter.
 - Demonstration report queue with dispatch and resolution workflow.
-- Simulated Citizen, Department Staff and Administrator presentation roles.
-- Browser-local persistence through localStorage.
+- Demo sign-in for Citizen, Department Staff and Administrator with role-specific workspaces and sample credentials.
+- Staff assignment workflow, staff-only assigned work queue and report status history.
+- In-app activity notifications, complaint hotspot summaries, priority escalation flags and citizen resolution feedback.
+- Duplicate-report cluster hints, CSV export and sample-data reset controls.
+- Browser-local persistence through localStorage and session-only demo sign-in.
 - Dark mode, responsive layout and reduced-motion support.
 
 ## Technology
@@ -54,9 +57,17 @@ If the key is missing or Gemini fails, the app shows an error and does not creat
 
 ## Demo accounts and data
 
-The role selector switches between Citizen, Department Staff and Administrator presentation modes. These are **simulated roles**, not authenticated accounts or server-enforced access controls.
+Use one of these public sample accounts on the sign-in screen:
 
-Reports and status changes persist in the current browser using localStorage. They are not shared between browsers or users. Seed reports, issue density, budget figures, population impact, dispatch times, sample departments, ward labels and service targets are synthetic.
+| Role | Email | Password |
+|---|---|---|
+| Citizen | `citizen@civicsync.demo` | `Citizen@123` |
+| Department staff | `staff@civicsync.demo` | `Staff@123` |
+| Administrator | `admin@civicsync.demo` | `Admin@123` |
+
+These are intentionally public demonstration credentials. Sign-in is a **presentation-only demo gate**, not real authentication: credentials are embedded in the public frontend, roles are not server-authorized, and no private user accounts should be created. The demo session is kept in `sessionStorage` and ends when the user signs out or the browser session is cleared.
+
+Reports, staff assignments, notifications and citizen feedback persist only in the current browser using `localStorage`. They are not shared between browsers or users. The staff work queue shows reports assigned to the sample staff account. Hotspots are calculated from the local report snapshot. Priority escalation flags reports with severity 90+ or an age of at least 48 hours; these are illustrative review prompts, not official SLA breaches. Resolution feedback is local demonstration data. Seed reports, issue density, budget figures, population impact, dispatch times, sample departments, ward labels and service targets are synthetic.
 
 ## DNCC simulation boundary
 
