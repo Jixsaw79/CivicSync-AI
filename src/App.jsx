@@ -951,13 +951,13 @@ function App() {
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" /> Dhaka North · Civic issue intelligence
               </div>
               <h1 className="mt-2 font-display text-2xl font-extrabold tracking-tight text-slate-950 sm:text-3xl dark:text-white">
-                {activeView === 'overview' ? 'Executive overview' : activeView === 'reports' ? (demoRole === 'staff' ? 'Department work queue' : 'Citizen issue reports') : activeView === 'my-reports' ? 'My submitted reports' : activeView === 'intelligence' ? 'City intelligence' : 'Budget & resource optimizer'}
+                {activeView === 'overview' ? (demoRole === 'visitor' ? 'Civic overview' : 'Executive overview') : activeView === 'reports' ? (demoRole === 'staff' ? 'Department work queue' : 'Citizen issue reports') : activeView === 'my-reports' ? 'My submitted reports' : activeView === 'intelligence' ? 'City intelligence' : 'Budget & resource optimizer'}
               </h1>
               <p className="mt-1.5 max-w-2xl text-sm text-slate-500 dark:text-slate-400">
                 {activeView === 'overview'
                   ? 'A unified view of urban infrastructure health, service demand and response priorities.'
                   : activeView === 'reports'
-                  ? (demoRole === 'staff' ? 'Review assigned civic issues and move work through the department response workflow.' : 'Explore community reports, inspect AI triage and submit a new civic issue.')
+                  ? (demoRole === 'staff' ? 'Review assigned civic issues and move work through the department response workflow.' : (demoRole === 'visitor' ? 'Explore public demonstration reports. Sign in from your profile to submit a civic issue.' : 'Explore community reports, inspect AI triage and submit a new civic issue.'))
                   : activeView === 'my-reports'
                   ? 'Track the status and response history of reports submitted in this browser’s citizen demo session.'
                   : activeView === 'intelligence'
