@@ -9,6 +9,9 @@ import {
 import { allocationData, initialReports, zones } from './data'
 import { loadStoredReports, readThemePreference, retainRecentEvidence } from './storage'
 import { buildReportsCsv } from './csv'
+import DemoLogin from './DemoLogin'
+import WorkflowFeatures from './WorkflowFeatures'
+import { demoStaff } from './demo-workflow'
 
 const MapView = lazy(() => import('./MapView'))
 const ChartRenderer = lazy(() => import('./ChartRenderer'))
@@ -466,9 +469,12 @@ function App() {
     }
   })
 
+  const [demoUser, setDemoUser] = useState(() => { try { return JSON.parse(window.sessionStorage.getItem('civicsync-demo-user') || 'null') } catch { return null } })
   const [selectedZone, setSelectedZone] = useState(null)
   const [activeView, setActiveView] = useState('overview')
-  const [demoRole, setDemoRole] = useState('admin')
+  const [demoRole, setDemoRole] = useState(() => { try { return JSON.parse(window.sessionStorage.getItem('civicsync-demo-user') || 'null')?.role || 'admin' } catch { return 'admin' } })
+  const [notifications, setNotifications] = useState(() => { try { return JSON.parse(window.localStorage.getItem('civicsync-notifications') || '[]').slice(0, 30) } catch { return [] } })
+  const [feedback, setFeedback] = useState(() => { try { return JSON.parse(window.localStorage.getItem('civicsync-feedback') || '{}') } catch { return {} } })
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All statuses')
   const [categoryFilter, setCategoryFilter] = useState('All categories')
@@ -516,12 +522,10 @@ function App() {
   }, [darkMode])
 
   useEffect(() => {
-    try {
-      window.localStorage.setItem('civicsync-reports-v2', JSON.stringify(reports))
-    } catch {
-      /* Storage may be unavailable or full. */
-    }
+    try { window.localStorage.setItem('civicsync-reports-v2', JSON.stringify(reports)) } catch { /* Storage may be unavailable or full. */ }
   }, [reports])
+  useEffect(() => { try { window.localStorage.setItem('civicsync-notifications', JSON.stringify(notifications.slice(0, 30))) } catch { /* Optional demo state. */ } }, [notifications])
+  useEffect(() => { try { window.localStorage.setItem('civicsync-feedback', JSON.stringify(feedback)) } catch { /* Optional demo state. */ } }, [feedback])
 
   useEffect(() => () => {
     if (toastTimer.current) window.clearTimeout(toastTimer.current)
@@ -585,8 +589,8 @@ function App() {
     { name: 'Resolved', value: resolvedReports.length },
   ], [reports, resolvedReports])
   const myReports = useMemo(
-    () => reports.filter((report) => report.citizenId === 'demo-citizen').sort((a, b) => new Date(b.createdAt || b.history?.[0]?.at || 0) - new Date(a.createdAt || a.history?.[0]?.at || 0)),
-    [reports]
+    () => reports.filter((report) => report.citizenId === (demoUser?.id || 'demo-citizen')).sort((a, b) => new Date(b.createdAt || b.history?.[0]?.at || 0) - new Date(a.createdAt || a.history?.[0]?.at || 0)),
+    [reports, demoUser]
   )
 
   const filteredReports = useMemo(
@@ -594,6 +598,7 @@ function App() {
       activeReports
         .filter(
           (r) =>
+            (demoRole !== 'staff' || r.assignedTo === demoUser?.id) &&
             (!selectedZone || r.zoneId === selectedZone) &&
             (statusFilter === 'All statuses' || r.status === statusFilter) &&
             (categoryFilter === 'All categories' || r.category === categoryFilter) &&
@@ -606,7 +611,7 @@ function App() {
               .includes(search.trim().toLowerCase())
         )
         .sort((a, b) => b.severity - a.severity),
-    [activeReports, selectedZone, statusFilter, categoryFilter, severityFilter, search]
+    [activeReports, demoRole, demoUser, selectedZone, statusFilter, categoryFilter, severityFilter, search]
   )
 
   const notify = useCallback((message) => {
@@ -615,10 +620,21 @@ function App() {
     toastTimer.current = window.setTimeout(() => setToast(''), 3200)
   }, [])
 
+  const addNotification = (message, audience = 'all') => setNotifications((prev) => [{ id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, message, audience, at: new Date().toISOString(), read: false }, ...prev].slice(0, 30))
+  const markNotificationRead = (id) => setNotifications((prev) => prev.map((item) => item.id === id ? { ...item, read: true } : item))
+  const assignReport = (id, staffId) => {
+    const person = demoStaff.find((staff) => staff.id === staffId)
+    setReports((prev) => prev.map((report) => report.id === id ? { ...report, assignedTo: staffId || null, status: staffId && report.status === 'Pending' ? 'Assigned' : report.status === 'Assigned' && !staffId ? 'Pending' : report.status, history: [...(report.history || []), { status: staffId ? 'Assigned' : 'Unassigned', note: staffId ? `Assigned to ${person?.name || 'staff'} (${person?.department || 'Municipal Response'}) in the demo workflow.` : 'Staff assignment cleared in the demo workflow.', at: new Date().toISOString() }] } : report))
+    addNotification(staffId ? `${id} assigned to ${person?.name || 'department staff'}.` : `${id} is now unassigned.`)
+    notify(staffId ? `${id} assigned to ${person?.name || 'staff'}` : `${id} assignment cleared`)
+  }
+  const submitFeedback = (id, rating) => { setFeedback((prev) => ({ ...prev, [id]: { rating, at: new Date().toISOString() } })); addNotification(`Citizen feedback received for ${id} (${rating}/5).`, 'admin'); notify('Thank you — your feedback was saved in this browser.') }
+
   const dispatch = (id) => {
     setReports((prev) =>
       prev.map((r) => (r.id === id && (r.status === 'Pending' || r.status === 'Assigned') ? { ...r, status: 'Dispatched', history: [...(r.history || []), { status: 'Dispatched', note: 'A municipal response crew was assigned in the demo workflow.', at: new Date().toISOString() }] } : r))
     )
+    addNotification(`Response crew dispatched for ${id}.`)
     notify(`Crew dispatched for ${id}`)
   }
 
@@ -626,6 +642,7 @@ function App() {
     setReports((prev) =>
       prev.map((r) => (r.id === id && r.status === 'Dispatched' ? { ...r, status: 'In progress', history: [...(r.history || []), { status: 'In progress', note: 'Department staff started the assigned work.', at: new Date().toISOString() }] } : r))
     )
+    addNotification(`Department work started for ${id}.`)
     notify(`Work started for ${id}`)
   }
 
@@ -642,6 +659,7 @@ function App() {
           : r
       )
     )
+    addNotification(`Report ${confirmResolve} marked as resolved. Citizen feedback is now available.`)
     notify(`Report ${confirmResolve} marked as resolved`)
     setConfirmResolve(null)
   }
@@ -753,7 +771,7 @@ function App() {
       const id = `CS-${nextId}`
       const newReport = {
         id,
-        citizenId: 'demo-citizen',
+        citizenId: demoUser?.id || 'demo-citizen',
         createdAt: new Date().toISOString(),
         title: triage.summary || note.trim().slice(0, 58),
         category: triage.category,
@@ -793,6 +811,16 @@ function App() {
     }
   }
 
+  const handleDemoLogin = (user) => {
+    setDemoUser(user); setDemoRole(user.role)
+    try { window.sessionStorage.setItem('civicsync-demo-user', JSON.stringify(user)) } catch { /* Optional session persistence. */ }
+    addNotification(`${user.name} signed in to the ${user.role} demo workspace.`)
+  }
+  const handleDemoLogout = () => {
+    try { window.sessionStorage.removeItem('civicsync-demo-user') } catch { /* Ignore unavailable storage. */ }
+    setDemoUser(null); setDemoRole('admin'); setActiveView('overview'); setSelectedReport(null)
+  }
+
   const changeDemoRole = (nextRole) => {
     setDemoRole(nextRole)
     if ((nextRole !== 'admin' && (activeView === 'optimizer' || activeView === 'intelligence')) || (nextRole !== 'citizen' && activeView === 'my-reports')) setActiveView('overview')
@@ -811,6 +839,8 @@ function App() {
 
   const allocationTotal = allocationData.reduce((sum, d) => sum + d.optimized, 0)
   const manualTotal = allocationData.reduce((sum, d) => sum + d.traditional, 0)
+
+  if (!demoUser) return <DemoLogin onLogin={handleDemoLogin} />
 
   return (
     <div className="min-h-screen bg-[#f5f7f6] text-slate-800 transition-colors dark:bg-[#0b1220] dark:text-slate-200">
@@ -881,25 +911,11 @@ function App() {
                 <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> DNCC simulation
               </span>
               <div className="hidden h-8 w-px bg-slate-200 dark:bg-slate-700 sm:block" />
-              <label className="hidden items-center gap-2 sm:flex">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Demo role</span>
-                <select value={demoRole} onChange={(event) => changeDemoRole(event.target.value)} className="field w-auto py-2 text-xs" aria-label="Switch simulated demo role">
-                  <option value="citizen">Citizen</option>
-                  <option value="staff">Department staff</option>
-                  <option value="admin">Administrator</option>
-                </select>
-              </label>
+              <div className="hidden items-center gap-2 sm:flex"><span className="text-right"><span className="block text-xs font-bold text-slate-800 dark:text-slate-100">{demoUser.name}</span><span className="block text-[10px] capitalize text-slate-400">{demoRole} · demo account</span></span><button onClick={handleDemoLogout} className="btn-secondary min-h-9 text-xs">Sign out</button></div>
             </div>
           </div>
           <div className="flex items-center gap-2 border-t border-slate-100 px-4 py-2 dark:border-slate-800 lg:hidden">
-            <label className="shrink-0">
-              <span className="sr-only">Switch simulated demo role</span>
-              <select value={demoRole} onChange={(event) => changeDemoRole(event.target.value)} className="field w-auto max-w-[132px] py-2 text-xs" aria-label="Switch simulated demo role">
-                <option value="citizen">Citizen</option>
-                <option value="staff">Department staff</option>
-                <option value="admin">Administrator</option>
-              </select>
-            </label>
+            <button onClick={handleDemoLogout} className="btn-secondary min-h-9 shrink-0 text-xs">Sign out</button>
             <nav aria-label="Primary navigation" className="flex min-w-0 gap-1 overflow-x-auto">
               {nav.map((item) => {
                 const Icon = item.icon
@@ -945,6 +961,8 @@ function App() {
               </p>
             </div>
           </div>
+
+          {activeView === 'overview' && <WorkflowFeatures role={demoRole} reports={reports} notifications={notifications.filter((item) => item.audience === 'all' || item.audience === demoRole)} onMarkRead={markNotificationRead} onAssign={assignReport} onSelect={setSelectedReport} feedback={feedback} onFeedback={submitFeedback} myReports={myReports} />}
 
           {activeView === 'overview' && (
             <>
