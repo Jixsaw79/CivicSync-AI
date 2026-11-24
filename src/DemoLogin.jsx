@@ -7,7 +7,7 @@ const accounts = [
   { email: 'admin@civicsync.demo', password: 'Admin@123', id: 'demo-admin', name: 'Demo Administrator', role: 'admin', label: 'Administrator', icon: ShieldCheck, description: 'Review reports, assign teams and monitor service trends.' },
 ]
 
-export default function DemoLogin({ onLogin }) {
+export default function DemoLogin({ onLogin, onCancel }) {
   const [email, setEmail] = useState(accounts[2].email)
   const [password, setPassword] = useState(accounts[2].password)
   const [error, setError] = useState('')
@@ -38,7 +38,7 @@ export default function DemoLogin({ onLogin }) {
         </section>
         <section className="mx-auto w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-900 sm:p-8">
           <div className="mb-7 lg:hidden"><div className="flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-xl bg-emerald-800 text-white"><Activity size={22} /></span><div className="font-display text-xl font-extrabold">CivicSync <span className="text-emerald-700 dark:text-emerald-400">AI</span></div></div></div>
-          <div className="eyebrow">Welcome back</div>
+          <div className="mb-5 flex justify-end"><button type="button" onClick={onCancel} className="btn-secondary min-h-9 text-xs">Back to public website</button></div><div className="eyebrow">Welcome back</div>
           <h2 className="mt-1 font-display text-2xl font-extrabold text-slate-950 dark:text-white">Sign in to CivicSync</h2>
           <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">Choose a sample account to explore the role-specific prototype.</p>
           <form className="mt-6 space-y-4" onSubmit={submit}>
