@@ -9,6 +9,9 @@ import {
 import { allocationData, initialReports, zones } from './data'
 import { loadStoredReports, readThemePreference, retainRecentEvidence } from './storage'
 import { buildReportsCsv } from './csv'
+import DemoLogin from './DemoLogin'
+import WorkflowFeatures from './WorkflowFeatures'
+import { demoStaff } from './demo-workflow'
 
 const MapView = lazy(() => import('./MapView'))
 const ChartRenderer = lazy(() => import('./ChartRenderer'))
@@ -150,9 +153,10 @@ function ZoneMap({ selected, onSelect, reports, onReportSelect }) {
   )
 }
 
-function ReportTable({ reports, onDispatch, onStart, onResolve, onSelect, canManage = true }) {
+function ReportTable({ reports, onDispatch, onStart, onResolve, onSelect, canManage = true, role = 'admin' }) {
   const renderAction = (report) => {
     if (!canManage) return <span className="text-xs font-medium text-slate-400">Staff access only</span>
+    if (role === 'staff' && report.status === 'Assigned') return <button onClick={() => onStart(report.id)} className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-xs font-bold text-sky-800 transition hover:bg-sky-50 dark:border-sky-800 dark:bg-slate-800 dark:text-sky-300 dark:hover:bg-sky-950/40">Start assigned work</button>
     if (report.status === 'Pending' || report.status === 'Assigned') {
       return <button onClick={() => onDispatch(report.id)} className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500">Dispatch crew</button>
     }
@@ -466,9 +470,13 @@ function App() {
     }
   })
 
+  const [demoUser, setDemoUser] = useState(() => { try { return JSON.parse(window.sessionStorage.getItem('civicsync-demo-user') || 'null') } catch { return null } })
+  const [showLogin, setShowLogin] = useState(false)
   const [selectedZone, setSelectedZone] = useState(null)
   const [activeView, setActiveView] = useState('overview')
-  const [demoRole, setDemoRole] = useState('admin')
+  const [demoRole, setDemoRole] = useState(() => { try { return JSON.parse(window.sessionStorage.getItem('civicsync-demo-user') || 'null')?.role || 'visitor' } catch { return 'visitor' } })
+  const [notifications, setNotifications] = useState(() => { try { const value = JSON.parse(window.localStorage.getItem('civicsync-notifications') || '[]'); return Array.isArray(value) ? value.slice(0, 30) : [] } catch { return [] } })
+  const [feedback, setFeedback] = useState(() => { try { const value = JSON.parse(window.localStorage.getItem('civicsync-feedback') || '{}'); return value && typeof value === 'object' && !Array.isArray(value) ? value : {} } catch { return {} } })
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All statuses')
   const [categoryFilter, setCategoryFilter] = useState('All categories')
@@ -516,12 +524,10 @@ function App() {
   }, [darkMode])
 
   useEffect(() => {
-    try {
-      window.localStorage.setItem('civicsync-reports-v2', JSON.stringify(reports))
-    } catch {
-      /* Storage may be unavailable or full. */
-    }
+    try { window.localStorage.setItem('civicsync-reports-v2', JSON.stringify(reports)) } catch { /* Storage may be unavailable or full. */ }
   }, [reports])
+  useEffect(() => { try { window.localStorage.setItem('civicsync-notifications', JSON.stringify(notifications.slice(0, 30))) } catch { /* Optional demo state. */ } }, [notifications])
+  useEffect(() => { try { window.localStorage.setItem('civicsync-feedback', JSON.stringify(feedback)) } catch { /* Optional demo state. */ } }, [feedback])
 
   useEffect(() => () => {
     if (toastTimer.current) window.clearTimeout(toastTimer.current)
@@ -585,8 +591,8 @@ function App() {
     { name: 'Resolved', value: resolvedReports.length },
   ], [reports, resolvedReports])
   const myReports = useMemo(
-    () => reports.filter((report) => report.citizenId === 'demo-citizen').sort((a, b) => new Date(b.createdAt || b.history?.[0]?.at || 0) - new Date(a.createdAt || a.history?.[0]?.at || 0)),
-    [reports]
+    () => reports.filter((report) => report.citizenId === (demoUser?.id || 'demo-citizen')).sort((a, b) => new Date(b.createdAt || b.history?.[0]?.at || 0) - new Date(a.createdAt || a.history?.[0]?.at || 0)),
+    [reports, demoUser]
   )
 
   const filteredReports = useMemo(
@@ -594,6 +600,7 @@ function App() {
       activeReports
         .filter(
           (r) =>
+            (demoRole !== 'staff' || Boolean(r.assignedTo)) &&
             (!selectedZone || r.zoneId === selectedZone) &&
             (statusFilter === 'All statuses' || r.status === statusFilter) &&
             (categoryFilter === 'All categories' || r.category === categoryFilter) &&
@@ -606,7 +613,7 @@ function App() {
               .includes(search.trim().toLowerCase())
         )
         .sort((a, b) => b.severity - a.severity),
-    [activeReports, selectedZone, statusFilter, categoryFilter, severityFilter, search]
+    [activeReports, demoRole, demoUser, selectedZone, statusFilter, categoryFilter, severityFilter, search]
   )
 
   const notify = useCallback((message) => {
@@ -615,17 +622,29 @@ function App() {
     toastTimer.current = window.setTimeout(() => setToast(''), 3200)
   }, [])
 
+  const addNotification = (message, audience = 'all') => setNotifications((prev) => [{ id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, message, audience, at: new Date().toISOString(), read: false }, ...prev].slice(0, 30))
+  const markNotificationRead = (id) => setNotifications((prev) => prev.map((item) => item.id === id ? { ...item, read: true } : item))
+  const assignReport = (id, staffId) => {
+    const person = demoStaff.find((staff) => staff.id === staffId)
+    setReports((prev) => prev.map((report) => report.id === id ? { ...report, assignedTo: staffId || null, status: staffId && report.status === 'Pending' ? 'Assigned' : report.status === 'Assigned' && !staffId ? 'Pending' : report.status, history: [...(report.history || []), { status: staffId ? 'Assigned' : 'Unassigned', note: staffId ? `Assigned to ${person?.name || 'staff'} (${person?.department || 'Municipal Response'}) in the demo workflow.` : 'Staff assignment cleared in the demo workflow.', at: new Date().toISOString() }] } : report))
+    addNotification(staffId ? `${id} assigned to ${person?.name || 'department staff'}.` : `${id} is now unassigned.`)
+    notify(staffId ? `${id} assigned to ${person?.name || 'staff'}` : `${id} assignment cleared`)
+  }
+  const submitFeedback = (id, rating) => { setFeedback((prev) => ({ ...prev, [id]: { rating, at: new Date().toISOString() } })); addNotification(`Citizen feedback received for ${id} (${rating}/5).`, 'admin'); notify('Thank you — your feedback was saved in this browser.') }
+
   const dispatch = (id) => {
     setReports((prev) =>
       prev.map((r) => (r.id === id && (r.status === 'Pending' || r.status === 'Assigned') ? { ...r, status: 'Dispatched', history: [...(r.history || []), { status: 'Dispatched', note: 'A municipal response crew was assigned in the demo workflow.', at: new Date().toISOString() }] } : r))
     )
+    addNotification(`Response crew dispatched for ${id}.`)
     notify(`Crew dispatched for ${id}`)
   }
 
   const startWork = (id) => {
     setReports((prev) =>
-      prev.map((r) => (r.id === id && r.status === 'Dispatched' ? { ...r, status: 'In progress', history: [...(r.history || []), { status: 'In progress', note: 'Department staff started the assigned work.', at: new Date().toISOString() }] } : r))
+      prev.map((r) => (r.id === id && (r.status === 'Dispatched' || r.status === 'Assigned') ? { ...r, status: 'In progress', history: [...(r.history || []), { status: 'In progress', note: 'Department staff started the assigned work.', at: new Date().toISOString() }] } : r))
     )
+    addNotification(`Department work started for ${id}.`)
     notify(`Work started for ${id}`)
   }
 
@@ -642,12 +661,15 @@ function App() {
           : r
       )
     )
+    addNotification(`Report ${confirmResolve} marked as resolved. Citizen feedback is now available.`)
     notify(`Report ${confirmResolve} marked as resolved`)
     setConfirmResolve(null)
   }
 
   const resetDemoData = () => {
     setReports(initialReports)
+    setFeedback({})
+    setNotifications([])
     setSelectedReport(null)
     setSelectedZone(null)
     setSearch('')
@@ -753,7 +775,7 @@ function App() {
       const id = `CS-${nextId}`
       const newReport = {
         id,
-        citizenId: 'demo-citizen',
+        citizenId: demoUser?.id || 'demo-citizen',
         createdAt: new Date().toISOString(),
         title: triage.summary || note.trim().slice(0, 58),
         category: triage.category,
@@ -780,6 +802,7 @@ function App() {
         municipalAdapter: municipal.adapter,
       }
       setReports((prev) => retainRecentEvidence([newReport, ...prev]))
+      addNotification(`New citizen report ${id} submitted in ${zone.name}.`)
       setResult(newReport)
       clearImage()
       setNote('')
@@ -791,6 +814,16 @@ function App() {
     } finally {
       setProcessing(false)
     }
+  }
+
+  const handleDemoLogin = (user) => {
+    setDemoUser(user); setDemoRole(user.role); setShowLogin(false)
+    try { window.sessionStorage.setItem('civicsync-demo-user', JSON.stringify(user)) } catch { /* Optional session persistence. */ }
+    addNotification(`${user.name} signed in to the ${user.role} demo workspace.`)
+  }
+  const handleDemoLogout = () => {
+    try { window.sessionStorage.removeItem('civicsync-demo-user') } catch { /* Ignore unavailable storage. */ }
+    setDemoUser(null); setDemoRole('visitor'); setShowLogin(false); setActiveView('overview'); setSelectedReport(null)
   }
 
   const changeDemoRole = (nextRole) => {
@@ -811,6 +844,8 @@ function App() {
 
   const allocationTotal = allocationData.reduce((sum, d) => sum + d.optimized, 0)
   const manualTotal = allocationData.reduce((sum, d) => sum + d.traditional, 0)
+
+  if (showLogin) return <DemoLogin onLogin={handleDemoLogin} onCancel={() => setShowLogin(false)} />
 
   return (
     <div className="min-h-screen bg-[#f5f7f6] text-slate-800 transition-colors dark:bg-[#0b1220] dark:text-slate-200">
@@ -881,25 +916,11 @@ function App() {
                 <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> DNCC simulation
               </span>
               <div className="hidden h-8 w-px bg-slate-200 dark:bg-slate-700 sm:block" />
-              <label className="hidden items-center gap-2 sm:flex">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Demo role</span>
-                <select value={demoRole} onChange={(event) => changeDemoRole(event.target.value)} className="field w-auto py-2 text-xs" aria-label="Switch simulated demo role">
-                  <option value="citizen">Citizen</option>
-                  <option value="staff">Department staff</option>
-                  <option value="admin">Administrator</option>
-                </select>
-              </label>
+              <div className="hidden items-center gap-2 sm:flex">{demoUser ? <><span className="text-right"><span className="block text-xs font-bold text-slate-800 dark:text-slate-100">{demoUser.name}</span><span className="block text-[10px] capitalize text-slate-400">{demoRole} · demo account</span></span><button onClick={handleDemoLogout} className="btn-secondary min-h-9 text-xs">Sign out</button></> : <button onClick={() => setShowLogin(true)} className="btn-primary min-h-9 text-xs">Profile · Sign in</button>}</div>
             </div>
           </div>
           <div className="flex items-center gap-2 border-t border-slate-100 px-4 py-2 dark:border-slate-800 lg:hidden">
-            <label className="shrink-0">
-              <span className="sr-only">Switch simulated demo role</span>
-              <select value={demoRole} onChange={(event) => changeDemoRole(event.target.value)} className="field w-auto max-w-[132px] py-2 text-xs" aria-label="Switch simulated demo role">
-                <option value="citizen">Citizen</option>
-                <option value="staff">Department staff</option>
-                <option value="admin">Administrator</option>
-              </select>
-            </label>
+            {demoUser ? <button onClick={handleDemoLogout} className="btn-secondary min-h-9 shrink-0 text-xs">Sign out</button> : <button onClick={() => setShowLogin(true)} className="btn-primary min-h-9 shrink-0 text-xs">Profile · Sign in</button>}
             <nav aria-label="Primary navigation" className="flex min-w-0 gap-1 overflow-x-auto">
               {nav.map((item) => {
                 const Icon = item.icon
@@ -930,13 +951,13 @@ function App() {
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" /> Dhaka North · Civic issue intelligence
               </div>
               <h1 className="mt-2 font-display text-2xl font-extrabold tracking-tight text-slate-950 sm:text-3xl dark:text-white">
-                {activeView === 'overview' ? 'Executive overview' : activeView === 'reports' ? (demoRole === 'staff' ? 'Department work queue' : 'Citizen issue reports') : activeView === 'my-reports' ? 'My submitted reports' : activeView === 'intelligence' ? 'City intelligence' : 'Budget & resource optimizer'}
+                {activeView === 'overview' ? (demoRole === 'visitor' ? 'Civic overview' : 'Executive overview') : activeView === 'reports' ? (demoRole === 'staff' ? 'Department work queue' : 'Citizen issue reports') : activeView === 'my-reports' ? 'My submitted reports' : activeView === 'intelligence' ? 'City intelligence' : 'Budget & resource optimizer'}
               </h1>
               <p className="mt-1.5 max-w-2xl text-sm text-slate-500 dark:text-slate-400">
                 {activeView === 'overview'
                   ? 'A unified view of urban infrastructure health, service demand and response priorities.'
                   : activeView === 'reports'
-                  ? (demoRole === 'staff' ? 'Review assigned civic issues and move work through the department response workflow.' : 'Explore community reports, inspect AI triage and submit a new civic issue.')
+                  ? (demoRole === 'staff' ? 'Review assigned civic issues and move work through the department response workflow.' : (demoRole === 'visitor' ? 'Explore public demonstration reports. Sign in from your profile to submit a civic issue.' : 'Explore community reports, inspect AI triage and submit a new civic issue.'))
                   : activeView === 'my-reports'
                   ? 'Track the status and response history of reports submitted in this browser’s citizen demo session.'
                   : activeView === 'intelligence'
@@ -945,6 +966,8 @@ function App() {
               </p>
             </div>
           </div>
+
+          {activeView === 'overview' && <WorkflowFeatures role={demoRole} reports={reports} notifications={notifications.filter((item) => item.audience === 'all' || item.audience === demoRole)} onMarkRead={markNotificationRead} onAssign={assignReport} onSelect={setSelectedReport} feedback={feedback} onFeedback={submitFeedback} myReports={myReports} />}
 
           {activeView === 'overview' && (
             <>
@@ -989,7 +1012,7 @@ function App() {
 
               <div className="mt-6">
                 <SectionHeading eyebrow="Operations" title="Priority maintenance queue" subtitle="Highest urgency items first." />
-                <ReportTable reports={filteredReports.slice(0, 6)} onDispatch={dispatch} onStart={startWork} onResolve={resolve} onSelect={setSelectedReport} canManage={demoRole !== 'citizen'} />
+                <ReportTable reports={filteredReports.slice(0, 6)} onDispatch={dispatch} onStart={startWork} onResolve={resolve} onSelect={setSelectedReport} canManage={demoRole === 'admin' || demoRole === 'staff'} role={demoRole} />
               </div>
             </>
           )}
@@ -1197,7 +1220,7 @@ function App() {
 
               <div className="grid gap-6 xl:grid-cols-5">
                 <div className="order-2 xl:order-1 xl:col-span-3">
-                  <ReportTable reports={filteredReports} onDispatch={dispatch} onStart={startWork} onResolve={resolve} onSelect={setSelectedReport} canManage={demoRole !== 'citizen'} />
+                  <ReportTable reports={filteredReports} onDispatch={dispatch} onStart={startWork} onResolve={resolve} onSelect={setSelectedReport} canManage={demoRole === 'admin' || demoRole === 'staff'} role={demoRole} />
                 </div>
 
                 <div className="panel order-1 p-5 sm:p-6 xl:order-2 xl:col-span-2">
@@ -1210,7 +1233,7 @@ function App() {
                     <span className="hidden shrink-0 rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-bold text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 sm:inline-flex">STEP 1 · REPORT</span>
                   </div>
 
-                  <form onSubmit={analyze} className="mt-5 space-y-4">
+                  {demoUser?.role === 'citizen' ? <form onSubmit={analyze} className="mt-5 space-y-4">
                     <div>
                       <label htmlFor="report-category" className="mb-1.5 block text-xs font-bold text-slate-600 dark:text-slate-300">Issue category</label>
                       <select id="report-category" value={category} onChange={(e) => setCategory(e.target.value)} className="field min-h-12">
@@ -1279,7 +1302,7 @@ function App() {
                         </>
                       )}
                     </button>
-                  </form>
+                  </form> : <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5 text-center dark:border-slate-700 dark:bg-slate-800/50"><ShieldCheck size={24} className="mx-auto text-emerald-700 dark:text-emerald-400" /><p className="mt-2 text-sm font-bold text-slate-800 dark:text-slate-100">Sign in as a citizen to submit a report</p><p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">You can browse the public dashboard and existing demonstration reports without signing in.</p><button type="button" onClick={() => setShowLogin(true)} className="btn-primary mt-4 min-h-10">Sign in to report an issue</button></div>}
 
                   {result && (
                     <div className="mt-5 animate-slide-up rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-950/30" role="status" aria-live="polite">
