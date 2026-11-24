@@ -471,9 +471,10 @@ function App() {
   })
 
   const [demoUser, setDemoUser] = useState(() => { try { return JSON.parse(window.sessionStorage.getItem('civicsync-demo-user') || 'null') } catch { return null } })
+  const [showLogin, setShowLogin] = useState(false)
   const [selectedZone, setSelectedZone] = useState(null)
   const [activeView, setActiveView] = useState('overview')
-  const [demoRole, setDemoRole] = useState(() => { try { return JSON.parse(window.sessionStorage.getItem('civicsync-demo-user') || 'null')?.role || 'admin' } catch { return 'admin' } })
+  const [demoRole, setDemoRole] = useState(() => { try { return JSON.parse(window.sessionStorage.getItem('civicsync-demo-user') || 'null')?.role || 'visitor' } catch { return 'visitor' } })
   const [notifications, setNotifications] = useState(() => { try { const value = JSON.parse(window.localStorage.getItem('civicsync-notifications') || '[]'); return Array.isArray(value) ? value.slice(0, 30) : [] } catch { return [] } })
   const [feedback, setFeedback] = useState(() => { try { const value = JSON.parse(window.localStorage.getItem('civicsync-feedback') || '{}'); return value && typeof value === 'object' && !Array.isArray(value) ? value : {} } catch { return {} } })
   const [search, setSearch] = useState('')
@@ -816,13 +817,13 @@ function App() {
   }
 
   const handleDemoLogin = (user) => {
-    setDemoUser(user); setDemoRole(user.role)
+    setDemoUser(user); setDemoRole(user.role); setShowLogin(false)
     try { window.sessionStorage.setItem('civicsync-demo-user', JSON.stringify(user)) } catch { /* Optional session persistence. */ }
     addNotification(`${user.name} signed in to the ${user.role} demo workspace.`)
   }
   const handleDemoLogout = () => {
     try { window.sessionStorage.removeItem('civicsync-demo-user') } catch { /* Ignore unavailable storage. */ }
-    setDemoUser(null); setDemoRole('admin'); setActiveView('overview'); setSelectedReport(null)
+    setDemoUser(null); setDemoRole('visitor'); setShowLogin(false); setActiveView('overview'); setSelectedReport(null)
   }
 
   const changeDemoRole = (nextRole) => {
@@ -844,7 +845,7 @@ function App() {
   const allocationTotal = allocationData.reduce((sum, d) => sum + d.optimized, 0)
   const manualTotal = allocationData.reduce((sum, d) => sum + d.traditional, 0)
 
-  if (!demoUser) return <DemoLogin onLogin={handleDemoLogin} />
+  if (showLogin) return <DemoLogin onLogin={handleDemoLogin} />
 
   return (
     <div className="min-h-screen bg-[#f5f7f6] text-slate-800 transition-colors dark:bg-[#0b1220] dark:text-slate-200">
@@ -915,11 +916,11 @@ function App() {
                 <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> DNCC simulation
               </span>
               <div className="hidden h-8 w-px bg-slate-200 dark:bg-slate-700 sm:block" />
-              <div className="hidden items-center gap-2 sm:flex"><span className="text-right"><span className="block text-xs font-bold text-slate-800 dark:text-slate-100">{demoUser.name}</span><span className="block text-[10px] capitalize text-slate-400">{demoRole} · demo account</span></span><button onClick={handleDemoLogout} className="btn-secondary min-h-9 text-xs">Sign out</button></div>
+              <div className="hidden items-center gap-2 sm:flex">{demoUser ? <><span className="text-right"><span className="block text-xs font-bold text-slate-800 dark:text-slate-100">{demoUser.name}</span><span className="block text-[10px] capitalize text-slate-400">{demoRole} · demo account</span></span><button onClick={handleDemoLogout} className="btn-secondary min-h-9 text-xs">Sign out</button></> : <button onClick={() => setShowLogin(true)} className="btn-primary min-h-9 text-xs">Profile · Sign in</button>}</div>
             </div>
           </div>
           <div className="flex items-center gap-2 border-t border-slate-100 px-4 py-2 dark:border-slate-800 lg:hidden">
-            <button onClick={handleDemoLogout} className="btn-secondary min-h-9 shrink-0 text-xs">Sign out</button>
+            {demoUser ? <button onClick={handleDemoLogout} className="btn-secondary min-h-9 shrink-0 text-xs">Sign out</button> : <button onClick={() => setShowLogin(true)} className="btn-primary min-h-9 shrink-0 text-xs">Profile · Sign in</button>}
             <nav aria-label="Primary navigation" className="flex min-w-0 gap-1 overflow-x-auto">
               {nav.map((item) => {
                 const Icon = item.icon
@@ -1011,7 +1012,7 @@ function App() {
 
               <div className="mt-6">
                 <SectionHeading eyebrow="Operations" title="Priority maintenance queue" subtitle="Highest urgency items first." />
-                <ReportTable reports={filteredReports.slice(0, 6)} onDispatch={dispatch} onStart={startWork} onResolve={resolve} onSelect={setSelectedReport} canManage={demoRole !== 'citizen'} role={demoRole} />
+                <ReportTable reports={filteredReports.slice(0, 6)} onDispatch={dispatch} onStart={startWork} onResolve={resolve} onSelect={setSelectedReport} canManage={demoRole === 'admin' || demoRole === 'staff'} role={demoRole} />
               </div>
             </>
           )}
@@ -1219,7 +1220,7 @@ function App() {
 
               <div className="grid gap-6 xl:grid-cols-5">
                 <div className="order-2 xl:order-1 xl:col-span-3">
-                  <ReportTable reports={filteredReports} onDispatch={dispatch} onStart={startWork} onResolve={resolve} onSelect={setSelectedReport} canManage={demoRole !== 'citizen'} role={demoRole} />
+                  <ReportTable reports={filteredReports} onDispatch={dispatch} onStart={startWork} onResolve={resolve} onSelect={setSelectedReport} canManage={demoRole === 'admin' || demoRole === 'staff'} role={demoRole} />
                 </div>
 
                 <div className="panel order-1 p-5 sm:p-6 xl:order-2 xl:col-span-2">
